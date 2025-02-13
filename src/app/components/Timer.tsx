@@ -85,7 +85,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ // this "react.fc" delc
               max={max} 
               value={value === 0 ? '' : value} 
               onChange={(e) => {
-                const inputValue = e.target.value === '' ? 0 : Number(e.target.value);
+                const inputValue = e.target.value === '' ? 0 : Number(e.target.value); // demetri when the user types in the input it replaces the value with '' unless there is a number other than 0 
                 setter(inputValue);
               }} 
               placeholder="0"
