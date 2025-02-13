@@ -12,7 +12,7 @@ interface CountdownTimerProps { // here i define the props and what types they c
 const CountdownTimer: React.FC<CountdownTimerProps> = ({ // this "react.fc" delcares a functional react componet. "CountdownTimerProps" specifies that this compnent accepts the props from my interface above
   initialDays = 0,
   initialHours = 0,
-  initialMinutes = 0,
+  initialMinutes = 25,
   initialSeconds = 0
 }) => {
   const [days, setDays] = useState(initialDays);
@@ -44,6 +44,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ // this "react.fc" delc
           setIsRunning(false); // Stop the timer.
         }
       }, 1000); // 1000 milliseconds = 1 second
+      console.log(`days:${days} Hours:${hours} Mintues:${minutes} Seconds:${seconds}`);
+
     }
   
     return () => clearInterval(interval); // This is crucial!  This cleanup function runs when the component unmounts or the dependencies of the useEffect change.  It clears the interval to prevent memory leaks and unexpected behavior.  This is like making sure the alarm is definitely turned off when you leave the room or change the alarm settings.
@@ -59,6 +61,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ // this "react.fc" delc
 
   const toggleTimer = () => { // obviously toggles the timer 
     setIsRunning(!isRunning);
+
   };
 
   return (
@@ -111,7 +114,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ // this "react.fc" delc
       </div>
       
       <div className="mt-4 text-center text-2xl font-bold text-blue-200 bg-blue-800 py-3 rounded">
-        {days}d:{hours.toString().padStart(2, '0')}h: {/* pad start makes sure the string alwasy show 2 numbers, and the 0 makes it add 0 to the start */}
+        {days}d:{hours.toString().padStart(2, '0')}h:{/* pad start makes sure the string alwasy show 2 numbers, and the 0 makes it add 0 to the start */}
         {minutes.toString().padStart(2, '0')}m: 
         {seconds.toString().padStart(2, '0')}s
       </div>
