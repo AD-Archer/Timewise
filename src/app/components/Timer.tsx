@@ -43,20 +43,20 @@ const Timer: React.FC<TimerProps> = ({ durations }) => {
   };
 
   return (
-    <div className="bg-blue-900 text-blue-100 shadow-lg rounded-lg p-6 max-w-md mx-auto">
+    <div className=" text-blue-100 shadow-lg rounded-lg p-6 max-w-md mx-auto">
       <div className="flex justify-center space-x-2 mb-4">
         {Object.keys(durations).map((mode) => (
           <button
             key={mode}
             onClick={() => setCurrentMode(mode as 'pomodoro' | 'shortBreak' | 'longBreak')}
-            className={`px-4 py-2 rounded ${currentMode === mode ? 'bg-blue-700' : 'bg-blue-500'} hover:opacity-80`}
+            className={`px-4 py-2 rounded ${currentMode === mode ? 'bg-pink-700' : 'bg-pink-500'} hover:opacity-80`}
           >
             {mode.replace(/([A-Z])/g, ' $1')}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 text-center text-4xl font-bold text-blue-200 bg-blue-800 py-3 rounded">
+      <div className="mt-4 text-center text-4xl font-bold text-blue-200 bg-pink-400 py-3 rounded">
         {formatTime(timeLeft)}
       </div>
 
