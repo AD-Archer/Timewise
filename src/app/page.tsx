@@ -13,11 +13,23 @@ export default function Home() {
   });
 
   return (
-<>
-      <BackgroundSelector />
-      <Settings setDurations={setDurations} />
-      <Timer durations={durations} />
+    <div className="relative min-h-screen">
+      {/* Timer Centered in the middle */}
+      <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
+        <div className="w-full max-w-lg p-4">
+          <Timer durations={durations} />
+        </div>
+      </div>
 
-</>
+      {/* Settings below the Timer and centered on mobile */}
+      <div className="absolute w-full text-center sm:bottom-20 sm:w-full sm:text-center">
+        <Settings setDurations={setDurations} />
+      </div>
+
+      {/* Background Selector below Settings and centered */}
+      <div className="absolute w-full text-center sm:bottom-4 sm:-translate--1/2">
+        <BackgroundSelector />
+      </div>
+    </div>
   );
 }
