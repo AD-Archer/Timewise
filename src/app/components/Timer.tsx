@@ -1,17 +1,23 @@
-'use client'
+'use client';
 import React, { useState, useEffect } from 'react';
-import { Pause, Play, RefreshCw, Clock } from 'lucide-react';
+import { Pause, Play, RefreshCw } from 'lucide-react';
 
-const TIMER_PRESETS = {
-  pomodoro: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 10 * 60,
-};
+interface TimerProps {
+  durations: {
+    pomodoro: number;
+    shortBreak: number;
+    longBreak: number;
+  };
+}
 
-const PomodoroTimer: React.FC = () => {
-  const [timeLeft, setTimeLeft] = useState(TIMER_PRESETS.pomodoro);
+const Timer: React.FC<TimerProps> = ({ durations }) => {
+  const [timeLeft, setTimeLeft] = useState(durations.pomodoro);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
+
+  useEffect(() => {
+    setTimeLeft(durations[currentMode]);
+  }, [durations, currentMode]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -23,12 +29,8 @@ const PomodoroTimer: React.FC = () => {
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  useEffect(() => {
-    setTimeLeft(TIMER_PRESETS[currentMode]);
-  }, [currentMode]);
-
   const resetTimer = () => {
-    setTimeLeft(TIMER_PRESETS[currentMode]);
+    setTimeLeft(durations[currentMode]);
     setIsRunning(false);
   };
 
@@ -41,9 +43,9 @@ const PomodoroTimer: React.FC = () => {
   };
 
   return (
-    <div className="bg-transparent text-blue-100 shadow-lg rounded-lg p-6 max-w-md mx-auto">
+    <div className="bg-blue-900 text-blue-100 shadow-lg rounded-lg p-6 max-w-md mx-auto">
       <div className="flex justify-center space-x-2 mb-4">
-        {Object.keys(TIMER_PRESETS).map((mode) => (
+        {Object.keys(durations).map((mode) => (
           <button
             key={mode}
             onClick={() => setCurrentMode(mode as 'pomodoro' | 'shortBreak' | 'longBreak')}
@@ -53,13 +55,8 @@ const PomodoroTimer: React.FC = () => {
           </button>
         ))}
       </div>
-      
-      <div className="flex flex-col items-center mb-6">
-        <Clock className="w-12 h-12 text-blue-300 mb-2" />
-        <h2 className="text-xl font-semibold text-blue-200">Pomodoro Timer</h2>
-      </div>
-      
-      <div className="mt-4 text-center text-4xl font-bold text-blue-200 bg-transparent py-3 rounded">
+
+      <div className="mt-4 text-center text-4xl font-bold text-blue-200 bg-blue-800 py-3 rounded">
         {formatTime(timeLeft)}
       </div>
 
@@ -81,4 +78,4 @@ const PomodoroTimer: React.FC = () => {
   );
 };
 
-export default PomodoroTimer;
+export default Timer;
