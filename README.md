@@ -11,6 +11,8 @@ This React component implements a countdown timer with days, hours, minutes, and
 * Reset button resets the timer to its initial values.
 * Uses `lucide-react` for icons.
 * Styled with Tailwind CSS.
+* Use webps instead of pngs for storage optimization.
+
 
 ## Installation
 
