@@ -4,6 +4,7 @@ import Timer from "./components/Timer";
 import BackgroundSelector from "./components/Background";
 import Settings from "./components/Settings";
 import { useState, useEffect } from "react";
+import YouTubePlayer from "./components/YoutubePlayer";
 
 export default function Home() {
   const [durations, setDurations] = useState({
@@ -27,10 +28,11 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen">
+      <YouTubePlayer/>
       {/* Small Screen Warning Popup */}
       {showWarning && (
         <div className="fixed inset-0 flex items-center justify-center text-white p-6">
-          <div className="p-6 rounded-lg shadow-lg text-center">
+          <div className="p-6 rounded-lg shadow-lg text-center bg-black">
             <p className="text-lg font-semibold">
               This site is not usable on smaller screens. Please use a larger device.
             </p>
