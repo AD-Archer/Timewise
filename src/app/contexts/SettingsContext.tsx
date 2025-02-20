@@ -33,6 +33,12 @@ interface SettingsContextType {
   resetAllSettings: () => void;
 }
 
+const defaultPlaylist: PlaylistInfo = {
+  id: 'PL6NdkXsPL07KN01gH2vucrHCEyyNmVEx4',
+  name: 'Default Study Mix',
+  url: 'https://youtube.com/playlist?list=PL6NdkXsPL07KN01gH2vucrHCEyyNmVEx4',
+};
+
 const defaultSettings: Settings = {
   durations: {
     pomodoro: 25 * 60,
@@ -43,8 +49,8 @@ const defaultSettings: Settings = {
   targetPomodoros: 4,
   autoStartBreaks: false,
   autoStartPomodoros: false,
-  playlists: [],
-  currentPlaylistId: null,
+  playlists: [defaultPlaylist],
+  currentPlaylistId: defaultPlaylist.id,
   soundEnabled: true,
   soundVolume: 0.5,
 };
@@ -80,7 +86,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetAllSettings = () => {
-    setSettings(defaultSettings);
+    setSettings({
+      ...defaultSettings,
+      playlists: [defaultPlaylist],
+      currentPlaylistId: defaultPlaylist.id,
+    });
   };
 
   return (
