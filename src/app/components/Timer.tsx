@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -13,40 +13,13 @@ const Timer = () => {
     setTimeLeft(settings.durations[currentMode]);
   }, [settings.durations, currentMode]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Timer completed
-            clearInterval(interval);
-            handleTimerComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
-  // Reset pomodoro count when target changes
-  useEffect(() => {
-    if (settings.pomodoroCount >= settings.targetPomodoros) {
-      updateSettings({ pomodoroCount: 0 });
-    }
-  }, [settings.targetPomodoros]);
-
-  const handleTimerComplete = () => {
+  const handleTimerComplete = useCallback(() => {
     setIsRunning(false);
     
     if (currentMode === 'pomodoro') {
-      // Increment pomodoro count
       const newCount = settings.pomodoroCount + 1;
       updateSettings({ pomodoroCount: newCount });
 
-      // Check if it's time for a long break
       if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
         if (settings.autoStartBreaks) {
@@ -61,14 +34,36 @@ const Timer = () => {
         }
       }
     } else {
-      // Break completed, start next pomodoro
       setCurrentMode('pomodoro');
       if (settings.autoStartPomodoros) {
         setTimeLeft(settings.durations.pomodoro);
         setIsRunning(true);
       }
     }
-  };
+  }, [settings, currentMode, updateSettings]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRunning && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleTimerComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, timeLeft, handleTimerComplete]);
+
+  useEffect(() => {
+    if (settings.pomodoroCount >= settings.targetPomodoros) {
+      updateSettings({ pomodoroCount: 0 });
+    }
+  }, [settings.pomodoroCount, settings.targetPomodoros, updateSettings]);
 
   const resetTimer = () => {
     setTimeLeft(settings.durations[currentMode]);

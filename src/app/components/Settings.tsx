@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBackground } from '../contexts/BackgroundContext';
+import type { PlaylistInfo } from '../contexts/SettingsContext';
+import Image from 'next/image';
 
 interface SettingsProps {
   currentTab: 'timer' | 'background' | 'music';
@@ -212,7 +214,13 @@ const Settings = ({ currentTab }: SettingsProps) => {
                 currentBackground === bg ? 'border-pink-500 scale-105' : 'border-transparent hover:border-white/50'
               }`}
             >
-              <img src={bg} alt={`Background ${index + 1}`} className="w-full h-full object-cover" />
+              <Image 
+                src={bg} 
+                alt={`Background ${index + 1}`} 
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 50vw, 33vw"
+              />
             </button>
           ))}
         </div>
@@ -323,7 +331,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             </li>
             <li className="flex gap-2">
               <span>4.</span>
-              <span>Make sure the playlist is public or unlisted</span>
+              <p>Don&apos;t see your playlist? Make sure it&apos;s public or unlisted</p>
             </li>
           </ul>
 

@@ -9,7 +9,7 @@ interface Durations {
   longBreak: number;
 }
 
-interface PlaylistInfo {
+export interface PlaylistInfo {
   id: string;
   name: string;
   url: string;
