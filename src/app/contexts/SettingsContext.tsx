@@ -9,13 +9,20 @@ interface Durations {
   longBreak: number;
 }
 
+interface PlaylistInfo {
+  id: string;
+  name: string;
+  url: string;
+}
+
 interface Settings {
   durations: Durations;
   pomodoroCount: number;  // Track completed pomodoros
   targetPomodoros: number;  // Number of pomodoros before long break
   autoStartBreaks: boolean;  // Auto start breaks
   autoStartPomodoros: boolean;  // Auto start next pomodoro
-  youtubePlaylistId: string;  // Add this line
+  playlists: PlaylistInfo[];
+  currentPlaylistId: string | null;
 }
 
 interface SettingsContextType {
@@ -33,7 +40,8 @@ const defaultSettings: Settings = {
   targetPomodoros: 4,
   autoStartBreaks: false,
   autoStartPomodoros: false,
-  youtubePlaylistId: 'PL6NdkXsPL07KqOQymt2EyI03C01U9Opxi',  // Add this line
+  playlists: [],
+  currentPlaylistId: null,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -45,7 +53,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setIsClient(true);
     const savedSettings = getLocalStorage('timerSettings', defaultSettings);
-    setSettings(savedSettings);
+    setSettings({
+      ...defaultSettings,
+      ...savedSettings,
+      playlists: savedSettings.playlists || [],
+    });
   }, []);
 
   useEffect(() => {
@@ -58,6 +70,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({
       ...prev,
       ...newSettings,
+      playlists: newSettings.playlists || prev.playlists || [],
     }));
   };
 
