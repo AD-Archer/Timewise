@@ -13,8 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Clock app for now",
-  description: "Simple timer",
+  title: "Timewise - Pomodoro Timer",
+  description: "A simple and cute pomodoro timer to help you stay focused and productive.",
+  icons: {
+    icon: '/timewise.svg',
+    shortcut: '/timewise.svg',
+    apple: '/timewise.svg',
+  },
 };
 
 export default function RootLayout({
@@ -24,6 +29,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/timewise.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/timewise.svg" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
