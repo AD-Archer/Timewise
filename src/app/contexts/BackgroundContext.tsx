@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 
 const backgrounds = [
   '/images/pinkroshihouse.webp',
@@ -17,8 +18,21 @@ interface BackgroundContextType {
 
 const BackgroundContext = createContext<BackgroundContextType | undefined>(undefined);
 
-export function BackgroundProvider({ children }: { children: ReactNode }) {
+export function BackgroundProvider({ children }: { children: React.ReactNode }) {
   const [currentBackground, setCurrentBackground] = useState(backgrounds[0]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    const savedBackground = getLocalStorage('currentBackground', backgrounds[0]);
+    setCurrentBackground(savedBackground);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      setLocalStorage('currentBackground', currentBackground);
+    }
+  }, [currentBackground, isClient]);
 
   const setBackground = (bg: string) => {
     setCurrentBackground(bg);

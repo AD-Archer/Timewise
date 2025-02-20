@@ -1,17 +1,25 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
-interface SettingsProps {
-  setDurations: (durations: { pomodoro: number; shortBreak: number; longBreak: number }) => void;
-}
+const Settings = () => {
+  const { durations, setDurations } = useSettings();
+  const [pomodoro, setPomodoro] = useState(Math.floor(durations.pomodoro / 60));
+  const [shortBreak, setShortBreak] = useState(Math.floor(durations.shortBreak / 60));
+  const [longBreak, setLongBreak] = useState(Math.floor(durations.longBreak / 60));
 
-const Settings: React.FC<SettingsProps> = ({ setDurations }) => {
-  const [pomodoro, setPomodoro] = useState(25);
-  const [shortBreak, setShortBreak] = useState(5);
-  const [longBreak, setLongBreak] = useState(10);
+  useEffect(() => {
+    setPomodoro(Math.floor(durations.pomodoro / 60));
+    setShortBreak(Math.floor(durations.shortBreak / 60));
+    setLongBreak(Math.floor(durations.longBreak / 60));
+  }, [durations]);
 
   const applySettings = () => {
-    setDurations({ pomodoro: pomodoro * 60, shortBreak: shortBreak * 60, longBreak: longBreak * 60 });
+    setDurations({
+      pomodoro: pomodoro * 60,
+      shortBreak: shortBreak * 60,
+      longBreak: longBreak * 60
+    });
   };
 
   const handleChange = (setter: React.Dispatch<React.SetStateAction<number>>) => (e: React.ChangeEvent<HTMLInputElement>) => {

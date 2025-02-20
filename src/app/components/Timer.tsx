@@ -1,16 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Pause, Play, RefreshCw } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
-interface TimerProps {
-  durations: {
-    pomodoro: number;
-    shortBreak: number;
-    longBreak: number;
-  };
-}
-
-const Timer: React.FC<TimerProps> = ({ durations }) => {
+const Timer = () => {
+  const { durations } = useSettings();
   const [timeLeft, setTimeLeft] = useState(durations.pomodoro);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');

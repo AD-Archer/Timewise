@@ -7,19 +7,14 @@ import Settings from "./components/Settings";
 import { useState, useEffect } from "react";
 import YouTubePlayer from "./components/YoutubePlayer";
 import { BackgroundProvider } from "./contexts/BackgroundContext";
+import { SettingsProvider } from "./contexts/SettingsContext";
 
 export default function Home() {
-  const [durations, setDurations] = useState({
-    pomodoro: 25 * 60,
-    shortBreak: 5 * 60,
-    longBreak: 10 * 60,
-  });
-
   const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
-      setShowWarning(window.innerWidth < 300); // Only show warning for very small screens
+      setShowWarning(window.innerWidth < 300);
     };
 
     checkScreenSize();
@@ -29,46 +24,39 @@ export default function Home() {
   }, []);
 
   return (
-    <BackgroundProvider>
-      <main className="relative min-h-screen  from-gray-900 to-gray-800">
-        {/* Background Image */}
-        <BackgroundImage />
-        
-        {/* Background Selector */}
-        <BackgroundSelector />
+    <SettingsProvider>
+      <BackgroundProvider>
+        <main className="relative min-h-screen from-gray-900 to-gray-800">
+          <BackgroundImage />
+          <BackgroundSelector />
 
-        {/* Main Content Container */}
-        <div className="relative flex flex-col min-h-screen">
-          {/* YouTube Player - Fixed at top */}
-          <div className="sticky top-0 z-30 w-full">
-            <YouTubePlayer />
-          </div>
-
-          {/* Timer Section */}
-          <div className="flex-grow flex items-center justify-center px-4 mb-4">
-            <div className="w-full max-w-md">
-              <Timer durations={durations} />
+          <div className="relative flex flex-col min-h-screen">
+            <div className="sticky top-0 z-30 w-full">
+              <YouTubePlayer />
             </div>
-          </div>
 
-          {/* Bottom Controls Container */}
-          <div className="relative w-full pb-4">
-            {/* Settings Panel */}
-            <div className="z-20 w-full px-4 pb-16">
-              <Settings setDurations={setDurations} />
+            <div className="flex-grow flex items-center justify-center px-4 mb-4">
+              <div className="w-full max-w-md">
+                <Timer />
+              </div>
             </div>
-          </div>
 
-          {/* Small Screen Warning - At the very bottom */}
-          {showWarning && (
-            <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-black">
-              <p className="text-xs text-center text-white">
-                This site works best on larger screens.
-              </p>
+            <div className="relative w-full pb-4">
+              <div className="z-20 w-full px-4 pb-16">
+                <Settings />
+              </div>
             </div>
-          )}
-        </div>
-      </main>
-    </BackgroundProvider>
+
+            {showWarning && (
+              <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-black">
+                <p className="text-xs text-center text-white">
+                  This site works best on larger screens.
+                </p>
+              </div>
+            )}
+          </div>
+        </main>
+      </BackgroundProvider>
+    </SettingsProvider>
   );
 }
