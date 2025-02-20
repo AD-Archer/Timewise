@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const YouTubePlayer = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isFullWidth, setIsFullWidth] = useState(false);
   const { settings } = useSettings();
 
   // If no playlist is selected, don't show the player
@@ -18,9 +19,16 @@ const YouTubePlayer = () => {
   }
 
   return (
-    <div>
+    <div className={`transition-all duration-300 ${isFullWidth ? 'w-full' : 'max-w-xl mx-auto'}`}>
       <div className="relative">
-        <div className={`transition-all duration-300 ${isCollapsed ? 'h-12' : 'h-72'} bg-black/50`}>
+        <div 
+          className={`
+            transition-all duration-300 
+            ${isCollapsed ? 'h-12 md:h-14' : 'h-48 md:h-72'} 
+            bg-black/50
+            ${isFullWidth ? '' : 'rounded-lg'}
+          `}
+        >
           <iframe
             className="w-full h-full"
             src={`https://www.youtube.com/embed/videoseries?list=${settings.currentPlaylistId}&autoplay=1&controls=1`}
@@ -29,12 +37,24 @@ const YouTubePlayer = () => {
             allowFullScreen
           />
         </div>
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 bg-pink-600 text-white p-1 rounded-full hover:bg-pink-700 transition-colors"
-        >
-          {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-        </button>
+        
+        {/* Controls */}
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 translate-y-1/2">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="bg-pink-600 text-white p-1 rounded-full hover:bg-pink-700 transition-colors shadow-lg"
+          >
+            {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+          </button>
+          
+          {/* Only show on desktop */}
+          <button
+            onClick={() => setIsFullWidth(!isFullWidth)}
+            className="hidden md:block bg-pink-600 text-white p-1 rounded-full hover:bg-pink-700 transition-colors shadow-lg"
+          >
+            {isFullWidth ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          </button>
+        </div>
       </div>
     </div>
   );
