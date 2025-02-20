@@ -20,39 +20,52 @@ const Settings: React.FC<SettingsProps> = ({ setDurations }) => {
   };
 
   return (
-    <div className="absolute top-4 right-4 bg-black bg-opacity-50 p-4 rounded z-10 max-w-xs sm:max-w-md">
-      <h3 className="text-white mb-2 text-lg sm:text-xl">Settings</h3>
+    <div className="fixed top-2 right-2 md:top-6 md:right-6 z-20">
+      <div className="backdrop-blur-md bg-black/50 p-4 md:p-6 rounded-xl shadow-xl w-[280px] md:w-72">
+        <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-white">Settings</h3>
 
-      <label className="text-white">Pomodoro (min):</label>
-      <input 
-        type="number" 
-        value={pomodoro === 0 ? '' : pomodoro}  // Show empty string if value is 0
-        onChange={handleChange(setPomodoro)} 
-        className="block p-2 mb-2 bg-gray-700 text-white rounded w-full"
-      />
+        <div className="space-y-3 md:space-y-4">
+          {/* Pomodoro Input */}
+          <div>
+            <label className="text-white/80 text-xs md:text-sm block mb-1">Pomodoro (min)</label>
+            <input 
+              type="number" 
+              value={pomodoro === 0 ? '' : pomodoro}
+              onChange={handleChange(setPomodoro)} 
+              className="w-full px-2 md:px-3 py-1.5 md:py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+            />
+          </div>
 
-      <label className="text-white">Short Break (min):</label>
-      <input 
-        type="number" 
-        value={shortBreak === 0 ? '' : shortBreak}  // Show empty string if value is 0
-        onChange={handleChange(setShortBreak)} 
-        className="block p-2 mb-2 bg-gray-700 text-white rounded w-full"
-      />
+          {/* Short Break Input */}
+          <div>
+            <label className="text-white/80 text-xs md:text-sm block mb-1">Short Break (min)</label>
+            <input 
+              type="number" 
+              value={shortBreak === 0 ? '' : shortBreak}
+              onChange={handleChange(setShortBreak)} 
+              className="w-full px-2 md:px-3 py-1.5 md:py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+            />
+          </div>
 
-      <label className="text-white">Long Break (min):</label>
-      <input 
-        type="number" 
-        value={longBreak === 0 ? '' : longBreak}  // Show empty string if value is 0
-        onChange={handleChange(setLongBreak)} 
-        className="block p-2 mb-2 bg-gray-700 text-white rounded w-full"
-      />
+          {/* Long Break Input */}
+          <div>
+            <label className="text-white/80 text-xs md:text-sm block mb-1">Long Break (min)</label>
+            <input 
+              type="number" 
+              value={longBreak === 0 ? '' : longBreak}
+              onChange={handleChange(setLongBreak)} 
+              className="w-full px-2 md:px-3 py-1.5 md:py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+            />
+          </div>
 
-      <button 
-        onClick={applySettings} 
-        className="bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-700 w-full sm:w-auto"
-      >
-        Apply
-      </button>
+          <button 
+            onClick={applySettings} 
+            className="w-full py-1.5 md:py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 mt-4 md:mt-6 text-sm md:text-base"
+          >
+            Apply Settings
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

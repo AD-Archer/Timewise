@@ -43,35 +43,48 @@ const Timer: React.FC<TimerProps> = ({ durations }) => {
   };
 
   return (
-    <div className=" text-blue-100 shadow-lg rounded-lg p-6 max-w-md mx-auto">
-      <div className="flex justify-center space-x-2 mb-4">
+    <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl">
+      {/* Mode Selection */}
+      <div className="flex justify-center gap-2 md:gap-3 mb-6 md:mb-8">
         {Object.keys(durations).map((mode) => (
           <button
             key={mode}
             onClick={() => setCurrentMode(mode as 'pomodoro' | 'shortBreak' | 'longBreak')}
-            className={`px-4 py-2 rounded ${currentMode === mode ? 'bg-pink-700' : 'bg-pink-500'} hover:opacity-80`}
+            className={`px-3 md:px-6 py-2 text-sm md:text-base rounded-full transition-all duration-300 ${
+              currentMode === mode 
+                ? 'bg-pink-600 text-white shadow-lg scale-105' 
+                : 'bg-white/20 text-white/80 hover:bg-white/30'
+            }`}
           >
-            {mode.replace(/([A-Z])/g, ' $1')}
+            {mode.replace(/([A-Z])/g, ' $1').trim()}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 text-center text-4xl font-bold text-blue-200 bg-pink-400 py-3 rounded">
-        {formatTime(timeLeft)}
+      {/* Timer Display */}
+      <div className="text-center mb-6 md:mb-8">
+        <div className="text-5xl md:text-7xl font-bold text-white tracking-wider">
+          {formatTime(timeLeft)}
+        </div>
       </div>
 
-      <div className="flex justify-center space-x-4 mt-4">
+      {/* Controls */}
+      <div className="flex justify-center gap-4 md:gap-6">
         <button 
           onClick={toggleTimer} 
-          className={`p-3 rounded-full ${isRunning ? 'bg-yellow-600' : 'bg-green-600'} text-white hover:opacity-80 transition-opacity`}
+          className={`p-3 md:p-4 rounded-full transition-all duration-300 ${
+            isRunning 
+              ? 'bg-yellow-500 hover:bg-yellow-600' 
+              : 'bg-green-500 hover:bg-green-600'
+          } text-white shadow-lg hover:scale-110`}
         >
-          {isRunning ? <Pause /> : <Play />}
+          {isRunning ? <Pause size={20} /> : <Play size={20} />}
         </button>
         <button 
           onClick={resetTimer} 
-          className="p-3 rounded-full bg-red-600 text-white hover:opacity-80 transition-opacity"
+          className="p-3 md:p-4 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg transition-all duration-300 hover:scale-110"
         >
-          <RefreshCw />
+          <RefreshCw size={20} />
         </button>
       </div>
     </div>

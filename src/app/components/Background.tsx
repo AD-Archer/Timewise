@@ -25,21 +25,32 @@ const BackgroundSelector: React.FC = () => {
     <>
       {/* Background Image */}
       <div 
-        className="fixed inset-0 bg-cover bg-center transition-all duration-500 -z-50"
-        style={{ backgroundImage: `url(${currentBg})` }}
+        className="fixed inset-0 bg-cover bg-center transition-all duration-1000 -z-50"
+        style={{ 
+          backgroundImage: `url(${currentBg})`,
+          opacity: 0.6 
+        }}
       />
 
-      {/* Buttons for Background Selection */}
-      <div className="absolute top-4 left-4 flex space-x-2 p-2 bg-black bg-opacity-50 rounded z-10">
-        {backgrounds.map((bg, index) => (
-          <button 
-            key={index} 
-            onClick={() => changeBackground(bg)}
-            className="p-2 text-white bg-gray-700 hover:bg-gray-500 rounded"
-          >
-            Bg {index + 1}
-          </button>
-        ))}
+      {/* Background Selector Controls */}
+      <div className="fixed bottom-2 left-2 md:bottom-6 md:left-6 z-20">
+        <div className="backdrop-blur-md bg-black/50 p-2 md:p-3 rounded-xl shadow-xl">
+          <div className="flex gap-1 md:gap-2">
+            {backgrounds.map((bg, index) => (
+              <button 
+                key={index} 
+                onClick={() => changeBackground(bg)}
+                className={`p-2 md:p-3 rounded-lg transition-all duration-300 text-sm md:text-base ${
+                  currentBg === bg
+                    ? 'bg-pink-600 text-white'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   );
