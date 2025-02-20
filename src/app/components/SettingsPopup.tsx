@@ -32,7 +32,7 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="relative w-full max-w-lg bg-black/50 rounded-xl overflow-hidden">
+      <div className="relative w-full max-w-lg bg-black/50 rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
         <button 
           onClick={onClose}
           className="absolute -top-2 -right-2 p-2 bg-pink-600 text-white rounded-full hover:bg-pink-700 transition-colors z-10"
@@ -40,7 +40,7 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
           <X size={20} />
         </button>
 
-        {/* Tabs */}
+        {/* Fixed Header with Tabs */}
         <div className="flex border-b border-white/10">
           {tabs.map((tab) => (
             <button
@@ -58,13 +58,13 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
           ))}
         </div>
 
-        {/* Content */}
-        <div className="p-4">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           <Settings currentTab={currentTab} />
         </div>
 
-        {/* Reset All Button */}
-        <div className="px-4 pb-4 text-center">
+        {/* Fixed Footer */}
+        <div className="px-4 py-3 border-t border-white/10 text-center">
           <button
             onClick={handleResetAll}
             className="text-xs text-red-400 hover:text-red-300 transition-colors"

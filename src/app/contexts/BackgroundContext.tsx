@@ -8,6 +8,11 @@ const backgrounds = [
   '/images/pinkcatwindow.webp',
   '/images/night.webp',
   '/images/bluekit.webp',
+  '/images/ohmypinksky.jpg',
+  '/images/fall-forest.jpg',
+  '/images/cafe.jpg',
+  '/images/fireplace.jpg',
+  '/images/aura.jpg',
 ];
 
 interface BackgroundContextType {

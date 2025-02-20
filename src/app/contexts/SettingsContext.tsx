@@ -23,6 +23,8 @@ interface Settings {
   autoStartPomodoros: boolean;  // Auto start next pomodoro
   playlists: PlaylistInfo[];
   currentPlaylistId: string | null;
+  soundEnabled: boolean;
+  soundVolume: number;
 }
 
 interface SettingsContextType {
@@ -43,6 +45,8 @@ const defaultSettings: Settings = {
   autoStartPomodoros: false,
   playlists: [],
   currentPlaylistId: null,
+  soundEnabled: true,
+  soundVolume: 0.5,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

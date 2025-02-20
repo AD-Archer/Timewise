@@ -191,6 +191,33 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </div>
         </div>
 
+        <div className="pt-2 border-t border-white/10 space-y-2">
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Enable Sounds:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.soundEnabled}
+              onChange={(e) => updateSettings({ soundEnabled: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+
+          {settings.soundEnabled && (
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs">Volume:</label>
+              <input 
+                type="range" 
+                min="0"
+                max="1"
+                step="0.1"
+                value={settings.soundVolume}
+                onChange={(e) => updateSettings({ soundVolume: parseFloat(e.target.value) })}
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          )}
+        </div>
+
         <button 
           onClick={applySettings} 
           className="w-full py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition-colors duration-300 mt-3"
@@ -230,7 +257,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
 
   if (currentTab === 'music') {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">Music Settings</h3>
           <button 
@@ -241,7 +268,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </button>
         </div>
         
-        {/* Add New Playlist */}
+        {/* Add New Playlist - Fixed at top */}
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
           <h4 className="text-sm font-medium text-white">Add New Playlist</h4>
           <div className="space-y-2">
@@ -269,51 +296,53 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </div>
         </div>
 
-        {/* Saved Playlists */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-white">Saved Playlists</h4>
-          {settings.playlists?.length > 0 ? (
-            <div className="space-y-2">
-              {settings.playlists.map((playlist) => (
-                <div 
-                  key={playlist.id} 
-                  className={`p-2 rounded-lg flex items-center justify-between ${
-                    settings.currentPlaylistId === playlist.id 
-                      ? 'bg-pink-600/20 border border-pink-500/50' 
-                      : 'bg-white/5'
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{playlist.name}</p>
-                    <p className="text-xs text-white/50 truncate">{playlist.url}</p>
+        {/* Saved Playlists - Scrollable */}
+        <div className="flex-1 min-h-0">
+          <h4 className="text-sm font-medium text-white mb-2">Saved Playlists</h4>
+          <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
+            {settings.playlists?.length > 0 ? (
+              <div className="space-y-2">
+                {settings.playlists.map((playlist) => (
+                  <div 
+                    key={playlist.id} 
+                    className={`p-2 rounded-lg flex items-center justify-between ${
+                      settings.currentPlaylistId === playlist.id 
+                        ? 'bg-pink-600/20 border border-pink-500/50' 
+                        : 'bg-white/5'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{playlist.name}</p>
+                      <p className="text-xs text-white/50 truncate">{playlist.url}</p>
+                    </div>
+                    <div className="flex gap-2 ml-2">
+                      <button
+                        onClick={() => updateSettings({ currentPlaylistId: playlist.id })}
+                        className={`px-2 py-1 text-xs rounded ${
+                          settings.currentPlaylistId === playlist.id
+                            ? 'bg-pink-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                        }`}
+                      >
+                        {settings.currentPlaylistId === playlist.id ? 'Selected' : 'Select'}
+                      </button>
+                      <button
+                        onClick={() => removePlaylist(playlist.id)}
+                        className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 ml-2">
-                    <button
-                      onClick={() => updateSettings({ currentPlaylistId: playlist.id })}
-                      className={`px-2 py-1 text-xs rounded ${
-                        settings.currentPlaylistId === playlist.id
-                          ? 'bg-pink-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                      }`}
-                    >
-                      {settings.currentPlaylistId === playlist.id ? 'Selected' : 'Select'}
-                    </button>
-                    <button
-                      onClick={() => removePlaylist(playlist.id)}
-                      className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-white/50 italic">No playlists added yet</p>
-          )}
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-white/50 italic">No playlists added yet</p>
+            )}
+          </div>
         </div>
 
-        {/* Guide */}
+        {/* Guide - Fixed at bottom */}
         <div className="mt-4 p-3 bg-white/5 rounded-lg">
           <h4 className="text-sm font-medium text-white mb-2">How to add music:</h4>
           <ul className="space-y-2 text-xs text-white/70">
