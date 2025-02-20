@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, Clock, Image, Music } from 'lucide-react';
 import Settings from './Settings';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface SettingsPopupProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ type SettingsTab = 'timer' | 'background' | 'music';
 
 const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
   const [currentTab, setCurrentTab] = useState<SettingsTab>('timer');
+  const { resetAllSettings } = useSettings();
 
   if (!isOpen) return null;
 
@@ -21,6 +23,12 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
     { id: 'background', label: 'Background', icon: Image },
     { id: 'music', label: 'Music', icon: Music },
   ] as const;
+
+  const handleResetAll = () => {
+    if (confirm('Are you sure you want to reset all settings to default?')) {
+      resetAllSettings();
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -53,6 +61,16 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
         {/* Content */}
         <div className="p-4">
           <Settings currentTab={currentTab} />
+        </div>
+
+        {/* Reset All Button */}
+        <div className="px-4 pb-4 text-center">
+          <button
+            onClick={handleResetAll}
+            className="text-xs text-red-400 hover:text-red-300 transition-colors"
+          >
+            Reset All Settings to Default
+          </button>
         </div>
       </div>
     </div>

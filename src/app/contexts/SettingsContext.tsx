@@ -28,6 +28,7 @@ interface Settings {
 interface SettingsContextType {
   settings: Settings;
   updateSettings: (newSettings: Partial<Settings>) => void;
+  resetAllSettings: () => void;
 }
 
 const defaultSettings: Settings = {
@@ -74,8 +75,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const resetAllSettings = () => {
+    setSettings(defaultSettings);
+  };
+
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings }}>
+    <SettingsContext.Provider value={{ settings, updateSettings, resetAllSettings }}>
       {children}
     </SettingsContext.Provider>
   );

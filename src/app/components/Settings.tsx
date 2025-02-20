@@ -85,10 +85,40 @@ const Settings = ({ currentTab }: SettingsProps) => {
     });
   };
 
+  const resetTimer = () => {
+    const defaultTimer = {
+      durations: {
+        pomodoro: 25 * 60,
+        shortBreak: 5 * 60,
+        longBreak: 10 * 60,
+      },
+      targetPomodoros: 4,
+      autoStartBreaks: false,
+      autoStartPomodoros: false,
+    };
+
+    updateSettings(defaultTimer);
+  };
+
+  const resetPlaylists = () => {
+    updateSettings({
+      playlists: [],
+      currentPlaylistId: null,
+    });
+  };
+
   if (currentTab === 'timer') {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white mb-4">Timer Settings</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Timer Settings</h3>
+          <button 
+            onClick={resetTimer}
+            className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            Reset to Default
+          </button>
+        </div>
 
         {/* Timer Durations */}
         <div className="space-y-2">
@@ -193,7 +223,15 @@ const Settings = ({ currentTab }: SettingsProps) => {
   if (currentTab === 'music') {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white mb-4">Music Settings</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Music Settings</h3>
+          <button 
+            onClick={resetPlaylists}
+            className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            Clear All Playlists
+          </button>
+        </div>
         
         {/* Add New Playlist */}
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
