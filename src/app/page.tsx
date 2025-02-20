@@ -28,34 +28,39 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
-      {/* YouTube Player - Fixed at top */}
-      <div className="fixed top-0 left-0 right-0 z-10">
-        <YouTubePlayer />
-      </div>
+      {/* Background Image - Always at the back */}
+      <BackgroundSelector />
 
-      {/* Small Screen Warning */}
-      {showWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4">
-          <div className="p-4 rounded-lg shadow-lg text-center">
-            <p className="text-sm md:text-lg font-semibold text-white">
-              This site works best on larger screens.
-            </p>
-          </div>
+      {/* Main Content Container */}
+      <div className="relative flex flex-col min-h-screen">
+        {/* YouTube Player - Fixed at top */}
+        <div className="sticky top-0 z-30 w-full">
+          <YouTubePlayer />
         </div>
-      )}
 
-      {/* Main Content */}
-      <div className="container mx-auto px-2 md:px-4 pt-24 md:pt-32 pb-24">
-        {/* Timer */}
-        <div className="flex justify-center items-center min-h-[50vh]">
-          <div className="w-full max-w-xl">
+        {/* Timer Section */}
+        <div className="flex-grow flex items-center justify-center px-4 mb-4">
+          <div className="w-full max-w-md">
             <Timer durations={durations} />
           </div>
         </div>
 
-        {/* Background Selector and Settings are positioned fixed */}
-        <BackgroundSelector />
-        <Settings setDurations={setDurations} />
+        {/* Bottom Controls Container */}
+        <div className="relative w-full pb-4">
+          {/* Settings Panel */}
+          <div className="z-20 w-full px-4 pb-16">
+            <Settings setDurations={setDurations} />
+          </div>
+        </div>
+
+        {/* Small Screen Warning - At the very bottom */}
+        {showWarning && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-black">
+            <p className="text-xs text-center text-white">
+              This site works best on larger screens.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );

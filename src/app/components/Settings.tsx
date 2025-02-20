@@ -20,49 +20,49 @@ const Settings: React.FC<SettingsProps> = ({ setDurations }) => {
   };
 
   return (
-    <div className="fixed top-2 right-2 md:top-6 md:right-6 z-20">
-      <div className="backdrop-blur-md bg-black/50 p-4 md:p-6 rounded-xl shadow-xl w-[280px] md:w-72">
-        <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 text-white">Settings</h3>
+    <div className="mx-auto max-w-sm">
+      <div className="backdrop-blur-md bg-black/50 p-3 rounded-xl shadow-xl">
+        <h3 className="text-base font-semibold mb-2 text-white">Settings</h3>
 
-        <div className="space-y-3 md:space-y-4">
+        <div className="space-y-2">
           {/* Pomodoro Input */}
-          <div>
-            <label className="text-white/80 text-xs md:text-sm block mb-1">Pomodoro (min)</label>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs w-20">Pomodoro:</label>
             <input 
               type="number" 
               value={pomodoro === 0 ? '' : pomodoro}
               onChange={handleChange(setPomodoro)} 
-              className="w-full px-2 md:px-3 py-1.5 md:py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
             />
           </div>
 
           {/* Short Break Input */}
-          <div>
-            <label className="text-white/80 text-xs md:text-sm block mb-1">Short Break (min)</label>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs w-20">Short Break:</label>
             <input 
               type="number" 
               value={shortBreak === 0 ? '' : shortBreak}
               onChange={handleChange(setShortBreak)} 
-              className="w-full px-2 md:px-3 py-1.5 md:py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
             />
           </div>
 
           {/* Long Break Input */}
-          <div>
-            <label className="text-white/80 text-xs md:text-sm block mb-1">Long Break (min)</label>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs w-20">Long Break:</label>
             <input 
               type="number" 
               value={longBreak === 0 ? '' : longBreak}
               onChange={handleChange(setLongBreak)} 
-              className="w-full px-2 md:px-3 py-1.5 md:py-2 bg-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
             />
           </div>
 
           <button 
             onClick={applySettings} 
-            className="w-full py-1.5 md:py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 mt-4 md:mt-6 text-sm md:text-base"
+            className="w-full py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition-colors duration-300 mt-3"
           >
-            Apply Settings
+            Apply
           </button>
         </div>
       </div>
