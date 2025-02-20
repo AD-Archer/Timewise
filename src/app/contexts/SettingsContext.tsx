@@ -15,6 +15,7 @@ interface Settings {
   targetPomodoros: number;  // Number of pomodoros before long break
   autoStartBreaks: boolean;  // Auto start breaks
   autoStartPomodoros: boolean;  // Auto start next pomodoro
+  youtubePlaylistId: string;  // Add this line
 }
 
 interface SettingsContextType {
@@ -32,6 +33,7 @@ const defaultSettings: Settings = {
   targetPomodoros: 4,
   autoStartBreaks: false,
   autoStartPomodoros: false,
+  youtubePlaylistId: 'PL6NdkXsPL07KqOQymt2EyI03C01U9Opxi',  // Add this line
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

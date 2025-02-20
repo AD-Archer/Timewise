@@ -16,7 +16,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const [targetPomodoros, setTargetPomodoros] = useState(settings.targetPomodoros);
   const [autoStartBreaks, setAutoStartBreaks] = useState(settings.autoStartBreaks);
   const [autoStartPomodoros, setAutoStartPomodoros] = useState(settings.autoStartPomodoros);
-  const [playlistId, setPlaylistId] = useState('PL6NdkXsPL07KqOQymt2EyI03C01U9Opxi');
+  const [playlistId, setPlaylistId] = useState(settings.youtubePlaylistId);
 
   useEffect(() => {
     setPomodoro(Math.floor(settings.durations.pomodoro / 60));
@@ -25,6 +25,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
     setTargetPomodoros(settings.targetPomodoros);
     setAutoStartBreaks(settings.autoStartBreaks);
     setAutoStartPomodoros(settings.autoStartPomodoros);
+    setPlaylistId(settings.youtubePlaylistId);
   }, [settings]);
 
   const applySettings = () => {
@@ -154,18 +155,66 @@ const Settings = ({ currentTab }: SettingsProps) => {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white mb-4">Music Settings</h3>
+        
         <div className="space-y-2">
-          <label className="text-white/80 text-xs block">YouTube Playlist ID:</label>
+          <label className="text-white/80 text-xs block">YouTube Playlist URL:</label>
           <input 
             type="text" 
+            placeholder="https://www.youtube.com/playlist?list=..."
             value={playlistId}
-            onChange={(e) => setPlaylistId(e.target.value)}
+            onChange={(e) => {
+              // Extract playlist ID from URL
+              const url = e.target.value;
+              const match = url.match(/[?&]list=([^&]+)/);
+              setPlaylistId(match ? match[1] : url);
+            }}
             className="w-full px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
           />
-          <p className="text-xs text-white/50">
-            Enter the playlist ID from a YouTube URL (e.g., PL6NdkXsPL07KqOQymt2EyI03C01U9Opxi)
-          </p>
+
+          <div className="mt-4 p-3 bg-white/5 rounded-lg">
+            <h4 className="text-sm font-medium text-white mb-2">How to add music:</h4>
+            <ul className="space-y-2 text-xs text-white/70">
+              <li className="flex gap-2">
+                <span>1.</span>
+                <span>Find or create a YouTube playlist</span>
+              </li>
+              <li className="flex gap-2">
+                <span>2.</span>
+                <span>Click 'Share' on the playlist</span>
+              </li>
+              <li className="flex gap-2">
+                <span>3.</span>
+                <span>Copy the playlist URL and paste it here</span>
+              </li>
+              <li className="flex gap-2">
+                <span>4.</span>
+                <span>Make sure the playlist is public or unlisted</span>
+              </li>
+            </ul>
+
+            <div className="mt-3 text-xs text-white/50">
+              <p>Recommended: Lofi, ambient, or instrumental music for focus</p>
+              <p className="mt-1">Example playlists:</p>
+              <ul className="mt-1 space-y-1 text-pink-400">
+                <li>• Lofi Girl - beats to study/relax to</li>
+                <li>• ChilledCow - peaceful piano</li>
+                <li>• Ambient Worlds - background music</li>
+              </ul>
+            </div>
+          </div>
         </div>
+
+        <button 
+          onClick={() => {
+            updateSettings({
+              ...settings,
+              youtubePlaylistId: playlistId
+            });
+          }} 
+          className="w-full py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition-colors duration-300 mt-3"
+        >
+          Apply
+        </button>
       </div>
     );
   }
