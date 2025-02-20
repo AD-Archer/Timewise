@@ -4,27 +4,67 @@ import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const Timer = () => {
-  const { durations } = useSettings();
-  const [timeLeft, setTimeLeft] = useState(durations.pomodoro);
+  const { settings, updateSettings } = useSettings();
+  const [timeLeft, setTimeLeft] = useState(settings.durations.pomodoro);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
 
   useEffect(() => {
-    setTimeLeft(durations[currentMode]);
-  }, [durations, currentMode]);
+    setTimeLeft(settings.durations[currentMode]);
+  }, [settings.durations, currentMode]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isRunning) {
+    if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            // Timer completed
+            clearInterval(interval);
+            handleTimerComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isRunning]);
 
+  const handleTimerComplete = () => {
+    setIsRunning(false);
+    
+    if (currentMode === 'pomodoro') {
+      // Increment pomodoro count
+      const newCount = settings.pomodoroCount + 1;
+      updateSettings({ pomodoroCount: newCount });
+
+      // Check if it's time for a long break
+      if (newCount % settings.targetPomodoros === 0) {
+        setCurrentMode('longBreak');
+        if (settings.autoStartBreaks) {
+          setTimeLeft(settings.durations.longBreak);
+          setIsRunning(true);
+        }
+      } else {
+        setCurrentMode('shortBreak');
+        if (settings.autoStartBreaks) {
+          setTimeLeft(settings.durations.shortBreak);
+          setIsRunning(true);
+        }
+      }
+    } else {
+      // Break completed, start next pomodoro
+      setCurrentMode('pomodoro');
+      if (settings.autoStartPomodoros) {
+        setTimeLeft(settings.durations.pomodoro);
+        setIsRunning(true);
+      }
+    }
+  };
+
   const resetTimer = () => {
-    setTimeLeft(durations[currentMode]);
+    setTimeLeft(settings.durations[currentMode]);
     setIsRunning(false);
   };
 
@@ -40,10 +80,14 @@ const Timer = () => {
     <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl">
       {/* Mode Selection */}
       <div className="flex justify-center gap-2 md:gap-3 mb-6 md:mb-8">
-        {Object.keys(durations).map((mode) => (
+        {Object.keys(settings.durations).map((mode) => (
           <button
             key={mode}
-            onClick={() => setCurrentMode(mode as 'pomodoro' | 'shortBreak' | 'longBreak')}
+            onClick={() => {
+              setCurrentMode(mode as 'pomodoro' | 'shortBreak' | 'longBreak');
+              setTimeLeft(settings.durations[mode as keyof typeof settings.durations]);
+              setIsRunning(false);
+            }}
             className={`px-3 md:px-6 py-2 text-sm md:text-base rounded-full transition-all duration-300 ${
               currentMode === mode 
                 ? 'bg-pink-600 text-white shadow-lg scale-105' 
@@ -59,6 +103,9 @@ const Timer = () => {
       <div className="text-center mb-6 md:mb-8">
         <div className="text-5xl md:text-7xl font-bold text-white tracking-wider">
           {formatTime(timeLeft)}
+        </div>
+        <div className="text-sm text-white/60 mt-2">
+          Pomodoro #{settings.pomodoroCount + 1} of {settings.targetPomodoros}
         </div>
       </div>
 

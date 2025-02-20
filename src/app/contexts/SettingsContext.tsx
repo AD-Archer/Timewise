@@ -9,41 +9,58 @@ interface Durations {
   longBreak: number;
 }
 
-interface SettingsContextType {
+interface Settings {
   durations: Durations;
-  setDurations: (durations: Durations) => void;
+  pomodoroCount: number;  // Track completed pomodoros
+  targetPomodoros: number;  // Number of pomodoros before long break
+  autoStartBreaks: boolean;  // Auto start breaks
+  autoStartPomodoros: boolean;  // Auto start next pomodoro
 }
 
-const defaultDurations: Durations = {
-  pomodoro: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 10 * 60,
+interface SettingsContextType {
+  settings: Settings;
+  updateSettings: (newSettings: Partial<Settings>) => void;
+}
+
+const defaultSettings: Settings = {
+  durations: {
+    pomodoro: 25 * 60,
+    shortBreak: 5 * 60,
+    longBreak: 10 * 60,
+  },
+  pomodoroCount: 0,
+  targetPomodoros: 4,
+  autoStartBreaks: false,
+  autoStartPomodoros: false,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [durations, setDurationsState] = useState(defaultDurations);
+  const [settings, setSettings] = useState(defaultSettings);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    const savedDurations = getLocalStorage('timerDurations', defaultDurations);
-    setDurationsState(savedDurations);
+    const savedSettings = getLocalStorage('timerSettings', defaultSettings);
+    setSettings(savedSettings);
   }, []);
 
   useEffect(() => {
     if (isClient) {
-      setLocalStorage('timerDurations', durations);
+      setLocalStorage('timerSettings', settings);
     }
-  }, [durations, isClient]);
+  }, [settings, isClient]);
 
-  const setDurations = (newDurations: Durations) => {
-    setDurationsState(newDurations);
+  const updateSettings = (newSettings: Partial<Settings>) => {
+    setSettings(prev => ({
+      ...prev,
+      ...newSettings,
+    }));
   };
 
   return (
-    <SettingsContext.Provider value={{ durations, setDurations }}>
+    <SettingsContext.Provider value={{ settings, updateSettings }}>
       {children}
     </SettingsContext.Provider>
   );

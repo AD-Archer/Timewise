@@ -3,22 +3,33 @@ import React, { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const Settings = () => {
-  const { durations, setDurations } = useSettings();
-  const [pomodoro, setPomodoro] = useState(Math.floor(durations.pomodoro / 60));
-  const [shortBreak, setShortBreak] = useState(Math.floor(durations.shortBreak / 60));
-  const [longBreak, setLongBreak] = useState(Math.floor(durations.longBreak / 60));
+  const { settings, updateSettings } = useSettings();
+  const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
+  const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
+  const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
+  const [targetPomodoros, setTargetPomodoros] = useState(settings.targetPomodoros);
+  const [autoStartBreaks, setAutoStartBreaks] = useState(settings.autoStartBreaks);
+  const [autoStartPomodoros, setAutoStartPomodoros] = useState(settings.autoStartPomodoros);
 
   useEffect(() => {
-    setPomodoro(Math.floor(durations.pomodoro / 60));
-    setShortBreak(Math.floor(durations.shortBreak / 60));
-    setLongBreak(Math.floor(durations.longBreak / 60));
-  }, [durations]);
+    setPomodoro(Math.floor(settings.durations.pomodoro / 60));
+    setShortBreak(Math.floor(settings.durations.shortBreak / 60));
+    setLongBreak(Math.floor(settings.durations.longBreak / 60));
+    setTargetPomodoros(settings.targetPomodoros);
+    setAutoStartBreaks(settings.autoStartBreaks);
+    setAutoStartPomodoros(settings.autoStartPomodoros);
+  }, [settings]);
 
   const applySettings = () => {
-    setDurations({
-      pomodoro: pomodoro * 60,
-      shortBreak: shortBreak * 60,
-      longBreak: longBreak * 60
+    updateSettings({
+      durations: {
+        pomodoro: pomodoro * 60,
+        shortBreak: shortBreak * 60,
+        longBreak: longBreak * 60,
+      },
+      targetPomodoros,
+      autoStartBreaks,
+      autoStartPomodoros,
     });
   };
 
@@ -33,37 +44,73 @@ const Settings = () => {
         <h3 className="text-base font-semibold mb-2 text-white">Settings</h3>
 
         <div className="space-y-2">
-          {/* Pomodoro Input */}
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs w-20">Pomodoro:</label>
-            <input 
-              type="number" 
-              value={pomodoro === 0 ? '' : pomodoro}
-              onChange={handleChange(setPomodoro)} 
-              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
+          {/* Timer Durations */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs w-20">Pomodoro:</label>
+              <input 
+                type="number" 
+                value={pomodoro === 0 ? '' : pomodoro}
+                onChange={handleChange(setPomodoro)} 
+                className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs w-20">Short Break:</label>
+              <input 
+                type="number" 
+                value={shortBreak === 0 ? '' : shortBreak}
+                onChange={handleChange(setShortBreak)} 
+                className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs w-20">Long Break:</label>
+              <input 
+                type="number" 
+                value={longBreak === 0 ? '' : longBreak}
+                onChange={handleChange(setLongBreak)} 
+                className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              />
+            </div>
           </div>
 
-          {/* Short Break Input */}
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs w-20">Short Break:</label>
-            <input 
-              type="number" 
-              value={shortBreak === 0 ? '' : shortBreak}
-              onChange={handleChange(setShortBreak)} 
-              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
+          {/* Pomodoro Sequence Settings */}
+          <div className="pt-2 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs w-20">Pomodoros:</label>
+              <input 
+                type="number" 
+                value={targetPomodoros}
+                onChange={handleChange(setTargetPomodoros)} 
+                className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              />
+            </div>
           </div>
 
-          {/* Long Break Input */}
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs w-20">Long Break:</label>
-            <input 
-              type="number" 
-              value={longBreak === 0 ? '' : longBreak}
-              onChange={handleChange(setLongBreak)} 
-              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
+          {/* Auto-start Settings */}
+          <div className="pt-2 border-t border-white/10 space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs">Auto-start Breaks:</label>
+              <input 
+                type="checkbox" 
+                checked={autoStartBreaks}
+                onChange={(e) => setAutoStartBreaks(e.target.checked)} 
+                className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-white/80 text-xs">Auto-start Pomodoros:</label>
+              <input 
+                type="checkbox" 
+                checked={autoStartPomodoros}
+                onChange={(e) => setAutoStartPomodoros(e.target.checked)} 
+                className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+              />
+            </div>
           </div>
 
           <button 
