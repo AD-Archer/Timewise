@@ -31,6 +31,13 @@ const Timer = () => {
     return () => clearInterval(interval);
   }, [isRunning]);
 
+  // Reset pomodoro count when target changes
+  useEffect(() => {
+    if (settings.pomodoroCount >= settings.targetPomodoros) {
+      updateSettings({ pomodoroCount: 0 });
+    }
+  }, [settings.targetPomodoros]);
+
   const handleTimerComplete = () => {
     setIsRunning(false);
     
@@ -40,7 +47,7 @@ const Timer = () => {
       updateSettings({ pomodoroCount: newCount });
 
       // Check if it's time for a long break
-      if (newCount % settings.targetPomodoros === 0) {
+      if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
         if (settings.autoStartBreaks) {
           setTimeLeft(settings.durations.longBreak);
