@@ -1,7 +1,7 @@
 'use client';
 
 import Timer from "./components/Timer";
-import BackgroundSelector from "./components/Background";
+// import BackgroundSelector from "./components/Background";
 import BackgroundImage from "./components/BackgroundImage";
 import SettingsPopup from "./components/SettingsPopup";
 import { Settings as SettingsIcon } from 'lucide-react';
@@ -30,7 +30,7 @@ export default function Home() {
       <BackgroundProvider>
         <main className="relative min-h-screen from-gray-900 to-gray-800">
           <BackgroundImage />
-          <BackgroundSelector />
+          {/* <BackgroundSelector /> */}
 
           <div className="relative flex flex-col min-h-screen">
             <div className="sticky top-0 z-30 w-full">
