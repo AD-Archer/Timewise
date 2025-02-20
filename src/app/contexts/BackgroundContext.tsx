@@ -1,0 +1,40 @@
+'use client';
+
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+const backgrounds = [
+  '/images/pinkroshihouse.webp',
+  '/images/pinkcatwindow.webp',
+  '/images/night.webp',
+  '/images/bluekit.webp',
+];
+
+interface BackgroundContextType {
+  currentBackground: string;
+  setBackground: (bg: string) => void;
+  backgrounds: string[];
+}
+
+const BackgroundContext = createContext<BackgroundContextType | undefined>(undefined);
+
+export function BackgroundProvider({ children }: { children: ReactNode }) {
+  const [currentBackground, setCurrentBackground] = useState(backgrounds[0]);
+
+  const setBackground = (bg: string) => {
+    setCurrentBackground(bg);
+  };
+
+  return (
+    <BackgroundContext.Provider value={{ currentBackground, setBackground, backgrounds }}>
+      {children}
+    </BackgroundContext.Provider>
+  );
+}
+
+export function useBackground() {
+  const context = useContext(BackgroundContext);
+  if (context === undefined) {
+    throw new Error('useBackground must be used within a BackgroundProvider');
+  }
+  return context;
+} 

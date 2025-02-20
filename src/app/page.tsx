@@ -2,9 +2,11 @@
 
 import Timer from "./components/Timer";
 import BackgroundSelector from "./components/Background";
+import BackgroundImage from "./components/BackgroundImage";
 import Settings from "./components/Settings";
 import { useState, useEffect } from "react";
 import YouTubePlayer from "./components/YoutubePlayer";
+import { BackgroundProvider } from "./contexts/BackgroundContext";
 
 export default function Home() {
   const [durations, setDurations] = useState({
@@ -27,41 +29,46 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
-      {/* Background Image - Always at the back */}
-      <BackgroundSelector />
+    <BackgroundProvider>
+      <main className="relative min-h-screen  from-gray-900 to-gray-800">
+        {/* Background Image */}
+        <BackgroundImage />
+        
+        {/* Background Selector */}
+        <BackgroundSelector />
 
-      {/* Main Content Container */}
-      <div className="relative flex flex-col min-h-screen">
-        {/* YouTube Player - Fixed at top */}
-        <div className="sticky top-0 z-30 w-full">
-          <YouTubePlayer />
-        </div>
-
-        {/* Timer Section */}
-        <div className="flex-grow flex items-center justify-center px-4 mb-4">
-          <div className="w-full max-w-md">
-            <Timer durations={durations} />
+        {/* Main Content Container */}
+        <div className="relative flex flex-col min-h-screen">
+          {/* YouTube Player - Fixed at top */}
+          <div className="sticky top-0 z-30 w-full">
+            <YouTubePlayer />
           </div>
-        </div>
 
-        {/* Bottom Controls Container */}
-        <div className="relative w-full pb-4">
-          {/* Settings Panel */}
-          <div className="z-20 w-full px-4 pb-16">
-            <Settings setDurations={setDurations} />
+          {/* Timer Section */}
+          <div className="flex-grow flex items-center justify-center px-4 mb-4">
+            <div className="w-full max-w-md">
+              <Timer durations={durations} />
+            </div>
           </div>
-        </div>
 
-        {/* Small Screen Warning - At the very bottom */}
-        {showWarning && (
-          <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-black">
-            <p className="text-xs text-center text-white">
-              This site works best on larger screens.
-            </p>
+          {/* Bottom Controls Container */}
+          <div className="relative w-full pb-4">
+            {/* Settings Panel */}
+            <div className="z-20 w-full px-4 pb-16">
+              <Settings setDurations={setDurations} />
+            </div>
           </div>
-        )}
-      </div>
-    </main>
+
+          {/* Small Screen Warning - At the very bottom */}
+          {showWarning && (
+            <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-black">
+              <p className="text-xs text-center text-white">
+                This site works best on larger screens.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+    </BackgroundProvider>
   );
 }
