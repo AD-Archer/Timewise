@@ -3,6 +3,10 @@
 ## Overview
 TimeWise is a modern, productivity-focused Pomodoro timer designed to help users efficiently manage their time while staying motivated. Built using **React** and **TypeScript**, it offers an intuitive and visually engaging experience with integrated features such as a **built-in YouTube playlist** and **customizable wallpapers**.
 
+# Import links
+Trello: available upon request
+
+
 ## Key Features
 - **Pomodoro Timer**: Standard Pomodoro cycles with customizable work and break durations.
 - **YouTube Playlist Integration**: Seamlessly play curated focus music or user-selected videos.
