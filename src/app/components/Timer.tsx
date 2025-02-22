@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSound } from '../hooks/useSound';
+import { useAnalytics } from '../contexts/AnalyticsContext';
 
 const Timer = () => {
   const { settings, updateSettings } = useSettings();
@@ -13,6 +14,8 @@ const Timer = () => {
   // Sound effects
   const pomodoroEndSound = useSound('/sounds/timer-end.mp3');
   const breakEndSound = useSound('/sounds/break-end.mp3');
+
+  const { recordPomodoroComplete, recordBreakComplete } = useAnalytics();
 
   useEffect(() => {
     setTimeLeft(settings.durations[currentMode]);
@@ -25,6 +28,7 @@ const Timer = () => {
       pomodoroEndSound.play();
       const newCount = settings.pomodoroCount + 1;
       updateSettings({ pomodoroCount: newCount });
+      recordPomodoroComplete(settings.durations.pomodoro / 60);
 
       if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
@@ -41,13 +45,14 @@ const Timer = () => {
       }
     } else {
       breakEndSound.play();
+      recordBreakComplete();
       setCurrentMode('pomodoro');
       if (settings.autoStartPomodoros) {
         setTimeLeft(settings.durations.pomodoro);
         setIsRunning(true);
       }
     }
-  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound]);
+  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound, recordPomodoroComplete, recordBreakComplete]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
