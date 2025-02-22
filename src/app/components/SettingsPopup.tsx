@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Clock, Image, Music } from 'lucide-react';
+import { X, Clock, Image, Music, Target } from 'lucide-react';
 import Settings from './Settings';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -10,7 +10,7 @@ interface SettingsPopupProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'timer' | 'background' | 'music';
+type SettingsTab = 'timer' | 'background' | 'music' | 'analytics';
 
 const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
   const [currentTab, setCurrentTab] = useState<SettingsTab>('timer');
@@ -22,6 +22,7 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
     { id: 'timer', label: 'Timer', icon: Clock },
     { id: 'background', label: 'Background', icon: Image },
     { id: 'music', label: 'Music', icon: Music },
+    { id: 'analytics', label: 'Stats', icon: Target },
   ] as const;
 
   const handleResetAll = () => {
@@ -40,22 +41,24 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
           <X size={20} />
         </button>
 
-        {/* Fixed Header with Tabs */}
-        <div className="flex border-b border-white/10">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setCurrentTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors ${
-                currentTab === tab.id
-                  ? 'bg-pink-600 text-white'
-                  : 'text-white/70 hover:bg-white/10'
-              }`}
-            >
-              <tab.icon size={16} />
-              {tab.label}
-            </button>
-          ))}
+        {/* Fixed Header with Scrollable Tabs */}
+        <div className="overflow-x-auto flex-none border-b border-white/10 custom-scrollbar">
+          <div className="flex min-w-max">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setCurrentTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${
+                  currentTab === tab.id
+                    ? 'bg-pink-600 text-white'
+                    : 'text-white/70 hover:bg-white/10'
+                }`}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -64,7 +67,7 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
         </div>
 
         {/* Fixed Footer */}
-        <div className="px-4 py-3 border-t border-white/10 text-center">
+        <div className="flex-none px-4 py-3 border-t border-white/10 text-center">
           <button
             onClick={handleResetAll}
             className="text-xs text-red-400 hover:text-red-300 transition-colors"
