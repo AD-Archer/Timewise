@@ -74,10 +74,19 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
           >
             Reset All Settings to Default
           </button>
+          <p className="text-sm text-white mt-2">
+            Consider contributing to our project on 
+            <a 
+              href="https://github.com/ad-archer/timewise" 
+              className="text-pink-600 hover:text-pink-400 transition-colors"
+            >
+               : GitHub
+            </a>
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default SettingsPopup; 
+export default SettingsPopup;
