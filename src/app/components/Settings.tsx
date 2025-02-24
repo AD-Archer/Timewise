@@ -2,16 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBackground } from '../contexts/BackgroundContext';
+import { useAnalytics } from '../contexts/AnalyticsContext';
 import type { PlaylistInfo } from '../contexts/SettingsContext';
 import Image from 'next/image';
+import { Target, Clock, Flame, Award } from 'lucide-react';
 
 interface SettingsProps {
-  currentTab: 'timer' | 'background' | 'music';
+  currentTab: 'timer' | 'background' | 'music' | 'analytics';
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
   const { settings, updateSettings } = useSettings();
   const { backgrounds, currentBackground, setBackground } = useBackground();
+  const { analytics, resetAnalytics } = useAnalytics();
   const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
   const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
   const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
@@ -107,6 +110,12 @@ const Settings = ({ currentTab }: SettingsProps) => {
       playlists: [],
       currentPlaylistId: null,
     });
+  };
+
+  const formatTime = (minutes: number) => {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
   };
 
   if (currentTab === 'timer') {
@@ -372,6 +381,49 @@ const Settings = ({ currentTab }: SettingsProps) => {
               <li>• ChilledCow - peaceful piano</li>
               <li>• Ambient Worlds - background music</li>
             </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentTab === 'analytics') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Statistics</h3>
+          <button 
+            onClick={resetAnalytics}
+            className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            Reset Stats
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
+            <Target className="text-pink-500 mb-2" size={24} />
+            <div className="text-2xl font-bold text-white">{analytics.totalPomodoros}</div>
+            <div className="text-xs text-white/70">Total Pomodoros</div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
+            <Clock className="text-pink-500 mb-2" size={24} />
+            <div className="text-2xl font-bold text-white">
+              {formatTime(Math.floor(analytics.totalFocusTime / 60))}
+            </div>
+            <div className="text-xs text-white/70">Total Focus Time</div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
+            <Flame className="text-pink-500 mb-2" size={24} />
+            <div className="text-2xl font-bold text-white">{analytics.currentStreak}</div>
+            <div className="text-xs text-white/70">Current Streak</div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
+            <Award className="text-pink-500 mb-2" size={24} />
+            <div className="text-2xl font-bold text-white">{analytics.longestStreak}</div>
+            <div className="text-xs text-white/70">Longest Streak</div>
           </div>
         </div>
       </div>
