@@ -1,4 +1,6 @@
 # Changelog
+## February 24, 2025
+- **Link to repo**: Added link to github repo in settings menu
 
 ## February 22, 2025
 - **Updated site to include analytics.**
