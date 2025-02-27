@@ -3,7 +3,7 @@
 - **Link to repo**: Added link to github repo in settings menu
 
 ## February 22, 2025
-- **Updated site to include analytics.**
+- **Analytics Update**: Updated site to include analytics the which lives inside of settings menu
 
 ## February 21, 2025
 - **Integration**: Added Trello integration for task management.

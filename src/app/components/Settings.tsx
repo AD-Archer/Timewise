@@ -6,9 +6,10 @@ import { useAnalytics } from '../contexts/AnalyticsContext';
 import type { PlaylistInfo } from '../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award } from 'lucide-react';
+import Achievements from './analytics/Achievements'; 
 
 interface SettingsProps {
-  currentTab: 'timer' | 'background' | 'music' | 'analytics';
+  currentTab: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
@@ -48,7 +49,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
 
   const handleChange = (setter: React.Dispatch<React.SetStateAction<number>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setter(value === '' ? 0 : Math.max(Number(value), 0)); // Ensure it doesn't go below 0
+    setter(value === '' ? NaN : Math.max(Number(value), 0)); // Use NaN for empty values
   };
 
   const addPlaylist = () => {
@@ -98,8 +99,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
         longBreak: 10 * 60,
       },
       targetPomodoros: 4,
-      autoStartBreaks: false,
-      autoStartPomodoros: false,
+      autoStartBreaks: true,
+      autoStartPomodoros: true,
     };
 
     updateSettings(defaultTimer);
@@ -111,6 +112,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
       currentPlaylistId: null,
     });
   };
+
+  
 
   const formatTime = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
@@ -128,7 +131,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
           >
             Reset to Default
-          </button>
+          </button>  
         </div>
 
         {/* Timer Durations */}
@@ -137,7 +140,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             <label className="text-white/80 text-xs w-20">Pomodoro:</label>
             <input 
               type="number" 
-              value={pomodoro === 0 ? '' : pomodoro}
+              value={isNaN(pomodoro) ? '' : pomodoro} 
               onChange={handleChange(setPomodoro)} 
               className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
             />
@@ -361,7 +364,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             </li>
             <li className="flex gap-2">
               <span>2.</span>
-              <span>Click 'Share' on the playlist</span>
+              <span>Click &apos;Share&apos; on the playlist</span>
             </li>
             <li className="flex gap-2">
               <span>3.</span>
@@ -428,6 +431,10 @@ const Settings = ({ currentTab }: SettingsProps) => {
         </div>
       </div>
     );
+  }
+
+  if (currentTab === 'achievements') {
+    return <Achievements />;
   }
 
   return null;

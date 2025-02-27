@@ -4,6 +4,7 @@ import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSound } from '../hooks/useSound';
 import { useAnalytics } from '../contexts/AnalyticsContext';
+import { useAchievements } from '../contexts/AchievementsContext';
 
 const Timer = () => {
   const { settings, updateSettings } = useSettings();
@@ -16,6 +17,7 @@ const Timer = () => {
   const breakEndSound = useSound('/sounds/break-end.mp3');
 
   const { recordPomodoroComplete, recordBreakComplete } = useAnalytics();
+  const { unlockAchievement } = useAchievements();
 
   useEffect(() => {
     setTimeLeft(settings.durations[currentMode]);
@@ -29,6 +31,14 @@ const Timer = () => {
       const newCount = settings.pomodoroCount + 1;
       updateSettings({ pomodoroCount: newCount });
       recordPomodoroComplete(settings.durations.pomodoro / 60);
+
+      // Unlock achievements
+      if (newCount === 1) {
+        unlockAchievement('1'); // First Pomodoro
+      }
+      if (newCount === 3) {
+        unlockAchievement('2'); // Streak Starter
+      }
 
       if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
@@ -52,7 +62,7 @@ const Timer = () => {
         setIsRunning(true);
       }
     }
-  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound, recordPomodoroComplete, recordBreakComplete]);
+  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound, recordPomodoroComplete, recordBreakComplete, unlockAchievement]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
