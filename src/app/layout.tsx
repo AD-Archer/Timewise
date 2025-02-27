@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { AchievementsProvider } from './contexts/AchievementsContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,10 +75,11 @@ export default function RootLayout({
         <link rel="icon" href="/timewise.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/timewise.svg" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <AchievementsProvider>
+          {children}
+          <ToastContainer />
+        </AchievementsProvider>
       </body>
     </html>
   );

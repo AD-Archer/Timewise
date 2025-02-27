@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Clock, Image, Music, Target } from 'lucide-react';
+import { X, Clock, Image, Music, Target, Award } from 'lucide-react'; 
 import Settings from './Settings';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -10,7 +10,7 @@ interface SettingsPopupProps {
   onClose: () => void;
 }
 
-type SettingsTab = 'timer' | 'background' | 'music' | 'analytics';
+type SettingsTab = 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
 
 const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
   const [currentTab, setCurrentTab] = useState<SettingsTab>('timer');
@@ -23,6 +23,7 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
     { id: 'background', label: 'Background', icon: Image },
     { id: 'music', label: 'Music', icon: Music },
     { id: 'analytics', label: 'Stats', icon: Target },
+    { id: 'achievements', label: 'Achievements', icon: Award }, 
   ] as const;
 
   const handleResetAll = () => {
@@ -80,4 +81,4 @@ const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
   );
 };
 
-export default SettingsPopup; 
+export default SettingsPopup;

@@ -6,9 +6,10 @@ import { useAnalytics } from '../contexts/AnalyticsContext';
 import type { PlaylistInfo } from '../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award } from 'lucide-react';
+import Achievements from './analytics/Achievements'; 
 
 interface SettingsProps {
-  currentTab: 'timer' | 'background' | 'music' | 'analytics';
+  currentTab: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
@@ -361,7 +362,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             </li>
             <li className="flex gap-2">
               <span>2.</span>
-              <span>Click 'Share' on the playlist</span>
+              <span>Click &apos;Share&apos; on the playlist</span>
             </li>
             <li className="flex gap-2">
               <span>3.</span>
@@ -428,6 +429,10 @@ const Settings = ({ currentTab }: SettingsProps) => {
         </div>
       </div>
     );
+  }
+
+  if (currentTab === 'achievements') {
+    return <Achievements />;
   }
 
   return null;
