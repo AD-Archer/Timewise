@@ -99,8 +99,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
         longBreak: 10 * 60,
       },
       targetPomodoros: 4,
-      autoStartBreaks: false,
-      autoStartPomodoros: false,
+      autoStartBreaks: true,
+      autoStartPomodoros: true,
     };
 
     updateSettings(defaultTimer);
@@ -112,6 +112,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
       currentPlaylistId: null,
     });
   };
+
+  
 
   const formatTime = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
@@ -129,7 +131,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
           >
             Reset to Default
-          </button>
+          </button>  
         </div>
 
         {/* Timer Durations */}
