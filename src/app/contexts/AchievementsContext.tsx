@@ -37,13 +37,14 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
   }, [achievements]);
 
   const unlockAchievement = (id: string) => {
-    setAchievements(prev =>
-      prev.map(ach => (ach.id === id ? { ...ach, unlocked: true } : ach)) // ach is achievement 
-    );
-    const achievement = achievements.find(ach => ach.id === id);
-    if (achievement) {
-      toast.success(`Achievement Unlocked: ${achievement.title}`);
-    }
+    setAchievements(prev => {
+      const achievement = prev.find(ach => ach.id === id);
+      if (achievement && !achievement.unlocked) {
+        toast.success(`Achievement Unlocked: ${achievement.title}`);
+        return prev.map(ach => (ach.id === id ? { ...ach, unlocked: true } : ach));
+      }
+      return prev;
+    });
   };
 
   return (

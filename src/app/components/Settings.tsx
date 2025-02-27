@@ -49,7 +49,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
 
   const handleChange = (setter: React.Dispatch<React.SetStateAction<number>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setter(value === '' ? 0 : Math.max(Number(value), 0)); // Ensure it doesn't go below 0
+    setter(value === '' ? NaN : Math.max(Number(value), 0)); // Use NaN for empty values
   };
 
   const addPlaylist = () => {
@@ -140,7 +140,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
             <label className="text-white/80 text-xs w-20">Pomodoro:</label>
             <input 
               type="number" 
-              value={pomodoro === 0 ? '' : pomodoro}
+              value={isNaN(pomodoro) ? '' : pomodoro} 
               onChange={handleChange(setPomodoro)} 
               className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
             />
