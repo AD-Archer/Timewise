@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { useSettings } from '../contexts/SettingsContext';
-import { useBackground } from '../contexts/BackgroundContext';
-import { useAnalytics } from '../contexts/AnalyticsContext';
-import type { PlaylistInfo } from '../contexts/SettingsContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useBackground } from '../../contexts/BackgroundContext';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
+import { useAchievements } from '../../contexts/AchievementsContext';
+import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award } from 'lucide-react';
-import Achievements from './analytics/Achievements'; 
+import Achievements from '../analytics/Achievements'; 
 
 interface SettingsProps {
   currentTab: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
@@ -16,6 +17,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const { settings, updateSettings } = useSettings();
   const { backgrounds, currentBackground, setBackground } = useBackground();
   const { analytics, resetAnalytics } = useAnalytics();
+  const { resetAchievements } = useAchievements();
   const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
   const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
   const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
@@ -434,7 +436,20 @@ const Settings = ({ currentTab }: SettingsProps) => {
   }
 
   if (currentTab === 'achievements') {
-    return <Achievements />;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Achievements</h3>
+          <button 
+            onClick={resetAchievements}
+            className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            Reset Achievements
+          </button>
+        </div>
+        <Achievements />
+      </div>
+    );
   }
 
   return null;

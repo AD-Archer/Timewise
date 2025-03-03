@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { X, Clock, Image, Music, Target, Award } from 'lucide-react'; 
 import Settings from './Settings';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
 interface SettingsPopupProps {
   isOpen: boolean;

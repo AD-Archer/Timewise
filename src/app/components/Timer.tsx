@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSound } from '../hooks/useSound';
@@ -11,27 +11,25 @@ const Timer = () => {
   const [timeLeft, setTimeLeft] = useState(settings.durations.pomodoro);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
+  const pomodoroCompletedRef = useRef(false);
+  const newPomodoroCountRef = useRef(0);
 
   // Sound effects
   const pomodoroEndSound = useSound('/sounds/timer-end.mp3');
   const breakEndSound = useSound('/sounds/break-end.mp3');
 
-  const { recordPomodoroComplete, recordBreakComplete } = useAnalytics();
+  const { recordPomodoroComplete, recordBreakComplete, analytics } = useAnalytics();
   const { unlockAchievement } = useAchievements();
 
   useEffect(() => {
     setTimeLeft(settings.durations[currentMode]);
   }, [settings.durations, currentMode]);
 
-  const handleTimerComplete = useCallback(() => {
-    setIsRunning(false);
-    
-    if (currentMode === 'pomodoro') {
-      pomodoroEndSound.play();
-      const newCount = settings.pomodoroCount + 1;
-      updateSettings({ pomodoroCount: newCount });
-      recordPomodoroComplete(settings.durations.pomodoro / 60);
-
+  // Handle achievement unlocking separately from timer completion
+  useEffect(() => {
+    if (pomodoroCompletedRef.current) {
+      const newCount = newPomodoroCountRef.current;
+      
       // Unlock achievements
       if (newCount === 1) {
         unlockAchievement('1'); // First Pomodoro
@@ -39,6 +37,63 @@ const Timer = () => {
       if (newCount === 3) {
         unlockAchievement('2'); // Streak Starter
       }
+      
+      // New achievements
+      if (newCount === 10) {
+        unlockAchievement('3'); // Focus Master
+      }
+      if (newCount === 25) {
+        unlockAchievement('4'); // Productivity Pro
+      }
+      
+      // Check for streak achievements
+      const { currentStreak } = analytics;
+      if (currentStreak === 5) {
+        unlockAchievement('6'); // Consistency King
+      }
+      
+      // Check for daily dedication
+      const today = new Date().toISOString().split('T')[0];
+      const todayStats = analytics.dailyStats.find(stat => stat.date === today);
+      if (todayStats && todayStats.completedPomodoros >= 4) {
+        unlockAchievement('7'); // Daily Dedication
+      }
+      
+      // Check for time-based achievements
+      const currentHour = new Date().getHours();
+      if (currentHour < 9) {
+        unlockAchievement('9'); // Early Bird
+      }
+      if (currentHour >= 22) {
+        unlockAchievement('10'); // Night Owl
+      }
+      
+      // Check for weekend warrior
+      const currentDay = new Date().getDay();
+      if (currentDay === 0 || currentDay === 6) { // 0 is Sunday, 6 is Saturday
+        unlockAchievement('8'); // Weekend Warrior
+      }
+      
+      // Check for total focus time
+      if (analytics.totalFocusTime >= 300) { // 5 hours = 300 minutes
+        unlockAchievement('5'); // Time Wizard
+      }
+      
+      pomodoroCompletedRef.current = false;
+    }
+  }, [analytics, unlockAchievement, settings.pomodoroCount]);
+
+  const handleTimerComplete = useCallback(() => {
+    setIsRunning(false);
+    
+    if (currentMode === 'pomodoro') {
+      pomodoroEndSound.play();
+      const newCount = settings.pomodoroCount + 1;
+      newPomodoroCountRef.current = newCount;
+      pomodoroCompletedRef.current = true;
+      
+      updateSettings({ pomodoroCount: newCount });
+      recordPomodoroComplete(settings.durations.pomodoro / 60);
 
       if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
@@ -62,7 +117,7 @@ const Timer = () => {
         setIsRunning(true);
       }
     }
-  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound, recordPomodoroComplete, recordBreakComplete, unlockAchievement]);
+  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound, recordPomodoroComplete, recordBreakComplete]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -81,9 +136,14 @@ const Timer = () => {
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, handleTimerComplete]);
 
+  // Use useEffect to check if pomodoroCount exceeds targetPomodoros
   useEffect(() => {
     if (settings.pomodoroCount >= settings.targetPomodoros) {
-      updateSettings({ pomodoroCount: 0 });
+      // Use setTimeout to avoid state updates during render
+      const timer = setTimeout(() => {
+        updateSettings({ pomodoroCount: 0 });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [settings.pomodoroCount, settings.targetPomodoros, updateSettings]);
 
