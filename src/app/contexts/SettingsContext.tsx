@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 
 interface Durations {
@@ -33,10 +33,11 @@ interface SettingsContextType {
   resetAllSettings: () => void;
 }
 
+// Default lofi study music playlist
 const defaultPlaylist: PlaylistInfo = {
-  id: 'PL6NdkXsPL07KN01gH2vucrHCEyyNmVEx4',
-  name: 'Default Study Mix',
-  url: 'https://youtube.com/playlist?list=PL6NdkXsPL07KN01gH2vucrHCEyyNmVEx4',
+  id: 'PLOzDu-MXXLliO9fBNZOQTBDddoA3FzZUo',
+  name: 'Lofi Study Music',
+  url: 'https://youtube.com/playlist?list=PLOzDu-MXXLliO9fBNZOQTBDddoA3FzZUo',
 };
 
 const defaultSettings: Settings = {
@@ -60,24 +61,65 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState(defaultSettings);
   const [isClient, setIsClient] = useState(false);
+  const pendingUpdateRef = useRef<Partial<Settings> | null>(null);
 
+  // Set isClient to true after initial render
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // Load settings from localStorage
+  useEffect(() => {
+    if (!isClient) return;
+    
     const savedSettings = getLocalStorage('timerSettings', defaultSettings);
+    
+    // Ensure we always have the default playlist available
+    const mergedPlaylists = [...(savedSettings.playlists || [])];
+    
+    // Add default playlist if it doesn't exist in saved playlists
+    if (!mergedPlaylists.some(p => p.id === defaultPlaylist.id)) {
+      mergedPlaylists.push(defaultPlaylist);
+    }
+    
     setSettings({
       ...defaultSettings,
       ...savedSettings,
-      playlists: savedSettings.playlists || [],
+      playlists: mergedPlaylists,
+      // If current playlist is null or undefined, use default
+      currentPlaylistId: savedSettings.currentPlaylistId || defaultPlaylist.id,
     });
-  }, []);
+  }, [isClient]);
 
+  // Save settings to localStorage whenever they change
   useEffect(() => {
     if (isClient) {
       setLocalStorage('timerSettings', settings);
     }
   }, [settings, isClient]);
 
+  // Handle pending updates
+  useEffect(() => {
+    if (pendingUpdateRef.current !== null) {
+      const newSettings = pendingUpdateRef.current;
+      pendingUpdateRef.current = null;
+      
+      setSettings(prev => ({
+        ...prev,
+        ...newSettings,
+        playlists: newSettings.playlists || prev.playlists || [],
+      }));
+    }
+  }, [settings.pomodoroCount]);
+
   const updateSettings = (newSettings: Partial<Settings>) => {
+    // For pomodoro count updates, use the ref to avoid render-time updates
+    if ('pomodoroCount' in newSettings) {
+      pendingUpdateRef.current = newSettings;
+      return;
+    }
+    
+    // For other settings, update immediately
     setSettings(prev => ({
       ...prev,
       ...newSettings,

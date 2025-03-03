@@ -1,6 +1,6 @@
 'use client';
 
-import { useBackground } from '../contexts/BackgroundContext';
+import { useBackground } from '../../contexts/BackgroundContext';
 
 const BackgroundImage = () => {
   const { currentBackground } = useBackground();
