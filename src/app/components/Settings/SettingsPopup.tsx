@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Clock, Image, Music, Target, Award } from 'lucide-react'; 
 import Settings from './Settings';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -8,13 +8,21 @@ import { useSettings } from '../../contexts/SettingsContext';
 interface SettingsPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
 }
 
 type SettingsTab = 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
 
-const SettingsPopup = ({ isOpen, onClose }: SettingsPopupProps) => {
-  const [currentTab, setCurrentTab] = useState<SettingsTab>('timer');
+const SettingsPopup = ({ isOpen, onClose, initialTab = 'timer' }: SettingsPopupProps) => {
+  const [currentTab, setCurrentTab] = useState<SettingsTab>(initialTab);
   const { resetAllSettings } = useSettings();
+
+  // Update currentTab when initialTab changes
+  useEffect(() => {
+    if (initialTab) {
+      setCurrentTab(initialTab);
+    }
+  }, [initialTab]);
 
   if (!isOpen) return null;
 

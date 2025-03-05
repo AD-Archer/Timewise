@@ -15,6 +15,14 @@ export interface PlaylistInfo {
   url: string;
 }
 
+// Spotify playlist interface
+export interface SpotifyPlaylistInfo {
+  id: string;
+  name: string;
+  uri: string;
+  imageUrl?: string;
+}
+
 interface Settings {
   durations: Durations;
   pomodoroCount: number;  // Track completed pomodoros
@@ -23,6 +31,11 @@ interface Settings {
   autoStartPomodoros: boolean;  // Auto start next pomodoro
   playlists: PlaylistInfo[];
   currentPlaylistId: string | null;
+  // Spotify related settings
+  spotifyPlaylists: SpotifyPlaylistInfo[];
+  currentSpotifyPlaylistUri: string | null;
+  // Music service preference
+  preferredMusicService: 'youtube' | 'spotify';
   soundEnabled: boolean;
   soundVolume: number;
 }
@@ -52,6 +65,11 @@ const defaultSettings: Settings = {
   autoStartPomodoros: true,
   playlists: [defaultPlaylist],
   currentPlaylistId: defaultPlaylist.id,
+  // Initialize empty Spotify playlists
+  spotifyPlaylists: [],
+  currentSpotifyPlaylistUri: null,
+  // Default to YouTube player
+  preferredMusicService: 'youtube',
   soundEnabled: true,
   soundVolume: 0.5,
 };

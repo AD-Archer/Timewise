@@ -5,8 +5,9 @@ import Timer from "./components/Timer";
 import BackgroundImage from "./components/Background/BackgroundImage";
 import SettingsPopup from "./components/Settings/SettingsPopup";
 import { Settings as SettingsIcon } from 'lucide-react';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import YouTubePlayer from "./components/Music/YoutubePlayer";
+import SpotifyPlayer from "./components/Music/SpotfiyPlayer";
 import { BackgroundProvider } from "./contexts/BackgroundContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
@@ -15,6 +16,7 @@ import { AchievementsProvider } from './contexts/AchievementsContext';
 export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements'>('timer');
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -24,7 +26,26 @@ export default function Home() {
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
     
-    return () => window.removeEventListener("resize", checkScreenSize);
+    // Listen for custom event to open settings to a specific tab
+    const handleOpenSettingsTab = (event: CustomEvent) => {
+      setShowSettings(true);
+      if (event.detail && event.detail.tab) {
+        setInitialSettingsTab(event.detail.tab);
+      }
+    };
+
+    window.addEventListener("openSettingsTab", handleOpenSettingsTab as EventListener);
+    
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+      window.removeEventListener("openSettingsTab", handleOpenSettingsTab as EventListener);
+    };
+  }, []);
+
+  // Notify when settings popup is closed
+  const handleCloseSettings = useCallback(() => {
+    setShowSettings(false);
+    window.dispatchEvent(new Event('settingsPopupClosed'));
   }, []);
 
   return (
@@ -55,12 +76,16 @@ export default function Home() {
                 <div className="sticky bottom-0 z-30 w-full">
                   <YouTubePlayer />
                 </div>
+                
+                {/* Spotify Player */}
+                <SpotifyPlayer />
               </div>
 
               {/* Settings Popup */}
               <SettingsPopup 
                 isOpen={showSettings} 
-                onClose={() => setShowSettings(false)} 
+                onClose={handleCloseSettings}
+                initialTab={initialSettingsTab}
               />
 
               {showWarning && (
