@@ -68,8 +68,8 @@ const defaultSettings: Settings = {
   // Initialize empty Spotify playlists
   spotifyPlaylists: [],
   currentSpotifyPlaylistUri: null,
-  // Default to YouTube player
-  preferredMusicService: 'youtube',
+  // Default to Spotify player
+  preferredMusicService: 'spotify',
   soundEnabled: true,
   soundVolume: 0.5,
 };
