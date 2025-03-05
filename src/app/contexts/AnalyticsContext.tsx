@@ -50,9 +50,15 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
     setIsClient(true);
     
     // Load analytics from localStorage
-    const savedAnalytics = getLocalStorage('analytics') as Analytics | null;
-    if (!savedAnalytics) return;
+    const defaultAnalytics: Analytics = {
+      totalPomodoros: 0,
+      totalFocusTime: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      dailyStats: []
+    };
     
+    const savedAnalytics = getLocalStorage('analytics', defaultAnalytics);
     setAnalytics(savedAnalytics);
   }, []);
 
@@ -68,10 +74,10 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateDailyStats = (focusTime: number) => {
-    if (!isClient) return; // Skip on server-side
+    if (!isClient) return [...analytics.dailyStats]; // Return current stats on server-side
     
     const today = getTodayKey();
-    if (!today) return; // Skip if not on client-side
+    if (!today) return [...analytics.dailyStats]; // Return current stats if not on client-side
     
     const updatedDailyStats = [...analytics.dailyStats];
     const todayIndex = updatedDailyStats.findIndex(stat => stat.date === today);
@@ -95,6 +101,7 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const recordPomodoroComplete = (focusTime: number) => {
+    // Always get an array of daily stats
     const updatedDailyStats = updateDailyStats(focusTime);
     const newStreak = analytics.currentStreak + 1;
 
