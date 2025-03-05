@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Music, Volume2, VolumeX, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Music, Volume2, VolumeX, AlertCircle, Play, Pause } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useMusic } from '../../contexts/MusicContext';
 
 const YouTubePlayer = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const { settings } = useSettings();
+  const { setIsPlaying: setMusicContextPlaying } = useMusic();
   const playerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -31,7 +34,10 @@ const YouTubePlayer = () => {
   useEffect(() => {
     setHasError(false);
     setIsLoading(true);
-  }, [settings.currentPlaylistId]);
+    // Reset playing state when playlist changes
+    setIsPlaying(false);
+    setMusicContextPlaying(false);
+  }, [settings.currentPlaylistId, setMusicContextPlaying]);
 
   // Handle iframe load events
   const handleIframeLoad = () => {
@@ -42,6 +48,30 @@ const YouTubePlayer = () => {
   const handleIframeError = () => {
     setHasError(true);
     setIsLoading(false);
+  };
+
+  // Toggle play/pause state
+  const togglePlayback = () => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow) return;
+    
+    try {
+      const newState = !isPlaying;
+      setIsPlaying(newState);
+      setMusicContextPlaying(newState);
+      
+      // Send message to iframe to play/pause
+      const action = newState ? 'playVideo' : 'pauseVideo';
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({
+          event: 'command',
+          func: action,
+          args: []
+        }), 
+        '*'
+      );
+    } catch (error) {
+      console.error('Error toggling playback:', error);
+    }
   };
 
   // Don't render if user has chosen Spotify player
@@ -62,10 +92,10 @@ const YouTubePlayer = () => {
   // Determine if we're using a playlist or single video
   const isPlaylist = settings.currentPlaylistId.startsWith('PL');
   
-  // Generate YouTube embed URL with parameters
+  // Generate YouTube embed URL with parameters - set autoplay to 0 (disabled)
   const youtubeEmbedUrl = isPlaylist
-    ? `https://www.youtube.com/embed/videoseries?list=${settings.currentPlaylistId}&autoplay=1&controls=1&mute=${isMuted ? 1 : 0}`
-    : `https://www.youtube.com/embed/${settings.currentPlaylistId}?autoplay=1&controls=1&mute=${isMuted ? 1 : 0}`;
+    ? `https://www.youtube.com/embed/videoseries?list=${settings.currentPlaylistId}&autoplay=0&controls=1&mute=${isMuted ? 1 : 0}&enablejsapi=1`
+    : `https://www.youtube.com/embed/${settings.currentPlaylistId}?autoplay=0&controls=1&mute=${isMuted ? 1 : 0}&enablejsapi=1`;
 
   // Get current playlist name
   const currentPlaylist = settings.playlists.find(p => p.id === settings.currentPlaylistId);
@@ -98,6 +128,18 @@ const YouTubePlayer = () => {
               </div>
               
               <div className="flex items-center gap-3">
+                {/* Play/Pause Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    togglePlayback();
+                  }}
+                  className="p-2 rounded-full bg-black/30 hover:bg-black/40 text-white transition-colors"
+                  aria-label={isPlaying ? "Pause" : "Play"}
+                >
+                  {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                </button>
+                
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -154,6 +196,15 @@ const YouTubePlayer = () => {
         {/* Controls (only visible when expanded) */}
         {!isCollapsed && (
           <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
+            {/* Play/Pause Button */}
+            <button
+              onClick={togglePlayback}
+              className="p-2 rounded-full bg-black/30 hover:bg-black/40 text-white transition-colors"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+            
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="p-2 rounded-full bg-black/30 hover:bg-black/40 text-white transition-colors"

@@ -3,11 +3,11 @@
  */
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import { SkipBack, SkipForward, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useMusic } from '../../contexts/MusicContext';
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from 'lucide-react';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -114,7 +114,7 @@ interface SpotifyPlaylistResponse {
 
 export default function SpotifyPlayer() {
   const { settings, updateSettings } = useSettings();
-  const { registerPlayer } = useMusic();
+  const { registerPlayer, setIsPlaying: setMusicContextPlaying } = useMusic();
   const [token, setToken] = useState<string | null>(null);
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -125,6 +125,7 @@ export default function SpotifyPlayer() {
   const [volume, setVolume] = useState(0.5);
   const [isLoading, setIsLoading] = useState(false);
   const playerRef = useRef<SpotifyPlayer | null>(null);
+  const [lastPlayedPlaylistUri, setLastPlayedPlaylistUri] = useState<string | null>(null);
 
   // Define logout function with useCallback to avoid dependency issues
   const logout = useCallback(() => {
@@ -142,6 +143,7 @@ export default function SpotifyPlayer() {
       setCurrentTrack(null);
       setIsPlaying(false);
       setDeviceId(null);
+      setLastPlayedPlaylistUri(null);
       
       // Remove token from storage
       window.localStorage.removeItem('spotify_token');
@@ -206,6 +208,12 @@ export default function SpotifyPlayer() {
     };
   }, [token]);
 
+  // Update isPlaying in both local state and MusicContext
+  const updatePlayingState = useCallback((playing: boolean) => {
+    setIsPlaying(playing);
+    setMusicContextPlaying(playing);
+  }, [setMusicContextPlaying]);
+
   // Setup player once SDK is loaded
   useEffect(() => {
     if (!token) return;
@@ -254,7 +262,7 @@ export default function SpotifyPlayer() {
           uri: currentTrackInfo.uri
         });
         
-        setIsPlaying(!state.paused);
+        updatePlayingState(!state.paused);
       });
 
       // Connect to the player
@@ -264,7 +272,7 @@ export default function SpotifyPlayer() {
         }
       });
     };
-  }, [token, volume]);
+  }, [token, volume, updatePlayingState]);
 
   // Handle token from URL hash or localStorage
   useEffect(() => {
@@ -334,8 +342,6 @@ export default function SpotifyPlayer() {
   const playPlaylist = useCallback(async (playlistUri: string) => {
     if (!token || !deviceId) return;
     
-    setIsLoading(true);
-    
     try {
       await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
@@ -348,11 +354,10 @@ export default function SpotifyPlayer() {
         })
       });
       
-      setIsPlaying(true);
+      // Update the last played playlist URI
+      setLastPlayedPlaylistUri(playlistUri);
     } catch (error) {
       console.error('Error playing playlist:', error);
-    } finally {
-      setIsLoading(false);
     }
   }, [token, deviceId]);
 
@@ -360,9 +365,44 @@ export default function SpotifyPlayer() {
   useEffect(() => {
     if (!token || !deviceId || !settings.currentSpotifyPlaylistUri) return;
     
-    // Auto-play the current playlist when device is ready
-    playPlaylist(settings.currentSpotifyPlaylistUri);
-  }, [deviceId, settings.currentSpotifyPlaylistUri, playPlaylist, token]);
+    // Log when the playlist changes
+    console.log('Current playlist URI changed to:', settings.currentSpotifyPlaylistUri);
+    console.log('Last played playlist URI:', lastPlayedPlaylistUri);
+    
+    // The user will need to click the play button to start playback
+    setIsLoading(false);
+    
+    // keep track of the current playlist URI to use when the user clicks play
+  }, [deviceId, settings.currentSpotifyPlaylistUri, token, lastPlayedPlaylistUri]);
+
+  // Add a new useEffect to handle playlist changes
+  useEffect(() => {
+    // If we're already playing music and the playlist changes, switch to the new playlist
+    // Only switch if the current playlist is different from the last played one
+    if (token && deviceId && settings.currentSpotifyPlaylistUri && isPlaying && 
+        settings.currentSpotifyPlaylistUri !== lastPlayedPlaylistUri) {
+      console.log('Switching to new playlist:', settings.currentSpotifyPlaylistUri);
+      // This will switch to the new playlist while maintaining playback state
+      playPlaylist(settings.currentSpotifyPlaylistUri)
+        .catch(error => console.error('Error switching playlist:', error));
+    }
+  }, [settings.currentSpotifyPlaylistUri, token, deviceId, isPlaying, playPlaylist, lastPlayedPlaylistUri]);
+
+  // Function to play the current playlist (will be called by user interaction)
+  const playCurrentPlaylist = async () => {
+    if (!token || !deviceId || !settings.currentSpotifyPlaylistUri) return;
+    
+    try {
+      setIsLoading(true);
+      await playPlaylist(settings.currentSpotifyPlaylistUri);
+      // Update playing state in both local state and MusicContext
+      updatePlayingState(true);
+    } catch (error) {
+      console.error('Error playing playlist:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loginToSpotify = () => {
     // Ensure REDIRECT_URI is defined before using it
@@ -381,13 +421,20 @@ export default function SpotifyPlayer() {
       const currentPlayer = player || playerRef.current;
       if (!currentPlayer) return;
       
+      // If we're not currently playing anything, start the playlist
+      if (!isPlaying && !currentTrack) {
+        await playCurrentPlaylist();
+        return;
+      }
+      
+      // Otherwise toggle play/pause on the current track
       await currentPlayer.togglePlay();
       
       // Update the player state in the MusicContext
       const state = await currentPlayer.getCurrentState();
       if (state) {
         // Update local state based on the player's paused state
-        setIsPlaying(!state.paused);
+        updatePlayingState(!state.paused);
       }
     } catch (error) {
       console.error('Error toggling playback:', error);
@@ -478,36 +525,55 @@ export default function SpotifyPlayer() {
       ) : (
         <>
           {/* Mini player header/toggle */}
-          <div 
-            className="flex items-center p-2 cursor-pointer"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            {currentTrack?.album.images[0]?.url ? (
-              <div className="w-12 h-12 relative rounded overflow-hidden flex-shrink-0">
-                <Image
-                  src={currentTrack.album.images[0].url}
-                  alt="Album Art"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 18V5l12-2v13"></path>
-                  <circle cx="6" cy="18" r="3"></circle>
-                  <circle cx="18" cy="16" r="3"></circle>
-                </svg>
-              </div>
-            )}
+          <div className="flex items-center p-2">
+            <div 
+              className="cursor-pointer flex items-center flex-1"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {currentTrack?.album.images[0]?.url ? (
+                <div className="w-12 h-12 relative rounded overflow-hidden flex-shrink-0">
+                  <Image
+                    src={currentTrack.album.images[0].url}
+                    alt="Album Art"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" width="24" height="24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                  </svg>
+                </div>
+              )}
+              
+              {isExpanded && (
+                <div className="ml-2 flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{currentTrack?.name || 'Not Playing'}</p>
+                  <p className="text-white/70 text-xs truncate">
+                    {currentTrack?.artists.map(a => a.name).join(', ') || 'Spotify'}
+                  </p>
+                </div>
+              )}
+            </div>
             
-            {isExpanded && (
-              <div className="ml-2 flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{currentTrack?.name || 'Not Playing'}</p>
-                <p className="text-white/70 text-xs truncate">
-                  {currentTrack?.artists.map(a => a.name).join(', ') || 'Spotify'}
-                </p>
-              </div>
+            {/* Add play/pause button to collapsed view */}
+            {!isExpanded && (
+              <button 
+                onClick={togglePlayback}
+                className="ml-1 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : isPlaying ? (
+                  <Pause size={14} />
+                ) : (
+                  <Play size={14} className="ml-0.5" />
+                )}
+              </button>
             )}
           </div>
           
@@ -519,7 +585,7 @@ export default function SpotifyPlayer() {
                 <button 
                   onClick={previousTrack}
                   className="text-white/70 hover:text-white transition-colors"
-                  disabled={isLoading}
+                  disabled={isLoading || !currentTrack}
                 >
                   <SkipBack size={18} />
                 </button>
@@ -530,7 +596,7 @@ export default function SpotifyPlayer() {
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                   ) : isPlaying ? (
                     <Pause size={18} />
                   ) : (
@@ -541,7 +607,7 @@ export default function SpotifyPlayer() {
                 <button 
                   onClick={nextTrack}
                   className="text-white/70 hover:text-white transition-colors"
-                  disabled={isLoading}
+                  disabled={isLoading || !currentTrack}
                 >
                   <SkipForward size={18} />
                 </button>

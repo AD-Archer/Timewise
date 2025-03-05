@@ -36,11 +36,28 @@ const defaultAnalytics: Analytics = {
 const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefined);
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
-  const [analytics, setAnalytics] = useState<Analytics>(defaultAnalytics);
   const [isClient, setIsClient] = useState(false);
+  const [analytics, setAnalytics] = useState<Analytics>({
+    totalPomodoros: 0,
+    totalFocusTime: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    dailyStats: []
+  });
 
+  // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
     setIsClient(true);
+    
+    // Load analytics from localStorage
+    const defaultAnalytics: Analytics = {
+      totalPomodoros: 0,
+      totalFocusTime: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      dailyStats: []
+    };
+    
     const savedAnalytics = getLocalStorage('analytics', defaultAnalytics);
     setAnalytics(savedAnalytics);
   }, []);
@@ -51,10 +68,17 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [analytics, isClient]);
 
-  const getTodayKey = () => new Date().toISOString().split('T')[0];
+  const getTodayKey = () => {
+    if (!isClient) return ''; // Return empty string on server-side
+    return new Date().toISOString().split('T')[0];
+  };
 
   const updateDailyStats = (focusTime: number) => {
+    if (!isClient) return [...analytics.dailyStats]; // Return current stats on server-side
+    
     const today = getTodayKey();
+    if (!today) return [...analytics.dailyStats]; // Return current stats if not on client-side
+    
     const updatedDailyStats = [...analytics.dailyStats];
     const todayIndex = updatedDailyStats.findIndex(stat => stat.date === today);
 
@@ -77,6 +101,7 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const recordPomodoroComplete = (focusTime: number) => {
+    // Always get an array of daily stats
     const updatedDailyStats = updateDailyStats(focusTime);
     const newStreak = analytics.currentStreak + 1;
 

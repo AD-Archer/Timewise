@@ -8,14 +8,16 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pause, Play, RefreshCw } from 'lucide-react';
-import { useSettings } from '../contexts/SettingsContext';
-import { useSound } from '../hooks/useSound';
-import { useAnalytics } from '../contexts/AnalyticsContext';
-import { useAchievements } from '../contexts/AchievementsContext';
-import { useMusic } from '../contexts/MusicContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useSound } from '../../hooks/useSound';
+import { useAnalytics } from '../../contexts/AnalyticsContext';
+import { useAchievements } from '../../contexts/AchievementsContext';
+import { useMusic } from '../../contexts/MusicContext';
+import { useTimer } from '../../contexts/TimerContext';
 
 const Timer = () => {
   const { settings, updateSettings } = useSettings();
+  const { activePresetId } = useTimer();
   const [timeLeft, setTimeLeft] = useState(settings.durations.pomodoro);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
@@ -29,13 +31,61 @@ const Timer = () => {
 
   const { recordPomodoroComplete, recordBreakComplete, analytics } = useAnalytics();
   const { unlockAchievement } = useAchievements();
+  
+  // State for client-side only date values
+  const [isClient, setIsClient] = useState(false);
+  
+  // Set isClient to true when component mounts (client-side only)
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     setTimeLeft(settings.durations[currentMode]);
   }, [settings.durations, currentMode]);
 
+  // Check for achievements when a pomodoro is completed
+  const checkAchievements = useCallback(() => {
+    if (!isClient) return; // Skip on server-side
+    
+    // Check for streak achievements
+    const { currentStreak } = analytics;
+    if (currentStreak === 5) {
+      unlockAchievement('6'); // Consistency King
+    }
+    
+    // Check for daily dedication
+    const today = new Date().toISOString().split('T')[0];
+    const todayStats = analytics.dailyStats.find(stat => stat.date === today);
+    if (todayStats && todayStats.completedPomodoros >= 4) {
+      unlockAchievement('7'); // Daily Dedication
+    }
+    
+    // Check for time-based achievements
+    const currentHour = new Date().getHours();
+    if (currentHour < 9) {
+      unlockAchievement('9'); // Early Bird
+    }
+    if (currentHour >= 22) {
+      unlockAchievement('10'); // Night Owl
+    }
+    
+    // Check for weekend warrior
+    const currentDay = new Date().getDay();
+    if (currentDay === 0 || currentDay === 6) { // 0 is Sunday, 6 is Saturday
+      unlockAchievement('8'); // Weekend Warrior
+    }
+    
+    // Check for total focus time
+    if (analytics.totalFocusTime >= 300) { // 5 hours = 300 minutes
+      unlockAchievement('5'); // Time Wizard
+    }
+  }, [analytics, unlockAchievement, isClient]);
+
   // Handle achievement unlocking separately from timer completion
   useEffect(() => {
+    if (!isClient) return; // Skip on server-side
+    
     if (pomodoroCompletedRef.current) {
       const newCount = newPomodoroCountRef.current;
       
@@ -55,42 +105,12 @@ const Timer = () => {
         unlockAchievement('4'); // Productivity Pro
       }
       
-      // Check for streak achievements
-      const { currentStreak } = analytics;
-      if (currentStreak === 5) {
-        unlockAchievement('6'); // Consistency King
-      }
-      
-      // Check for daily dedication
-      const today = new Date().toISOString().split('T')[0];
-      const todayStats = analytics.dailyStats.find(stat => stat.date === today);
-      if (todayStats && todayStats.completedPomodoros >= 4) {
-        unlockAchievement('7'); // Daily Dedication
-      }
-      
-      // Check for time-based achievements
-      const currentHour = new Date().getHours();
-      if (currentHour < 9) {
-        unlockAchievement('9'); // Early Bird
-      }
-      if (currentHour >= 22) {
-        unlockAchievement('10'); // Night Owl
-      }
-      
-      // Check for weekend warrior
-      const currentDay = new Date().getDay();
-      if (currentDay === 0 || currentDay === 6) { // 0 is Sunday, 6 is Saturday
-        unlockAchievement('8'); // Weekend Warrior
-      }
-      
-      // Check for total focus time
-      if (analytics.totalFocusTime >= 300) { // 5 hours = 300 minutes
-        unlockAchievement('5'); // Time Wizard
-      }
+      // Check for other achievements
+      checkAchievements();
       
       pomodoroCompletedRef.current = false;
     }
-  }, [analytics, unlockAchievement, settings.pomodoroCount]);
+  }, [analytics, unlockAchievement, settings.pomodoroCount, isClient, checkAchievements]);
 
   const handleTimerComplete = useCallback(() => {
     setIsRunning(false);
@@ -217,6 +237,11 @@ const Timer = () => {
         </div>
         <div className="text-sm text-white/60 mt-2">
           Pomodoro #{settings.pomodoroCount + 1} of {settings.targetPomodoros}
+          {activePresetId && (
+            <span className="ml-2 text-xs bg-pink-600/40 px-2 py-0.5 rounded-full">
+              Using preset
+            </span>
+          )}
         </div>
       </div>
 
