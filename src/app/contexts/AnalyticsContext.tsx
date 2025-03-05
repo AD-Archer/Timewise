@@ -36,12 +36,23 @@ const defaultAnalytics: Analytics = {
 const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefined);
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
-  const [analytics, setAnalytics] = useState<Analytics>(defaultAnalytics);
   const [isClient, setIsClient] = useState(false);
+  const [analytics, setAnalytics] = useState<Analytics>({
+    totalPomodoros: 0,
+    totalFocusTime: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    dailyStats: []
+  });
 
+  // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
     setIsClient(true);
-    const savedAnalytics = getLocalStorage('analytics', defaultAnalytics);
+    
+    // Load analytics from localStorage
+    const savedAnalytics = getLocalStorage('analytics') as Analytics | null;
+    if (!savedAnalytics) return;
+    
     setAnalytics(savedAnalytics);
   }, []);
 
@@ -51,10 +62,17 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [analytics, isClient]);
 
-  const getTodayKey = () => new Date().toISOString().split('T')[0];
+  const getTodayKey = () => {
+    if (!isClient) return ''; // Return empty string on server-side
+    return new Date().toISOString().split('T')[0];
+  };
 
   const updateDailyStats = (focusTime: number) => {
+    if (!isClient) return; // Skip on server-side
+    
     const today = getTodayKey();
+    if (!today) return; // Skip if not on client-side
+    
     const updatedDailyStats = [...analytics.dailyStats];
     const todayIndex = updatedDailyStats.findIndex(stat => stat.date === today);
 

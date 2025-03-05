@@ -7,9 +7,13 @@ import { useState, useEffect } from 'react';
  * Updates every second to show accurate time
  */
 const Clock = () => {
-  const [time, setTime] = useState<Date>(new Date());
+  // Start with null to prevent hydration mismatch
+  const [time, setTime] = useState<Date | null>(null);
   
   useEffect(() => {
+    // Set initial time on client-side only
+    setTime(new Date());
+    
     // Update time every second
     const intervalId = setInterval(() => {
       setTime(new Date());
@@ -18,6 +22,16 @@ const Clock = () => {
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
   }, []);
+  
+  // If time is null (during server rendering), show a placeholder
+  if (!time) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg">
+        <div className="text-3xl font-semibold mb-1">--:--:-- --</div>
+        <div className="text-sm opacity-80">Loading...</div>
+      </div>
+    );
+  }
   
   // Format time as HH:MM:SS
   const formattedTime = time.toLocaleTimeString([], {

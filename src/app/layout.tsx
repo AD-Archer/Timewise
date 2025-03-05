@@ -4,6 +4,8 @@ import "./globals.css";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AchievementsProvider } from './contexts/AchievementsContext';
+import { SettingsProvider } from './contexts/SettingsContext';
+import { TimerProvider } from './contexts/TimerContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -76,10 +78,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/timewise.svg" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AchievementsProvider>
-          {children}
-          <ToastContainer />
-        </AchievementsProvider>
+        <SettingsProvider>
+          <AchievementsProvider>
+            <TimerProvider>
+              {children}
+              <ToastContainer />
+            </TimerProvider>
+          </AchievementsProvider>
+        </SettingsProvider>
       </body>
     </html>
   );
