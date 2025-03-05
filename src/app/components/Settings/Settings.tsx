@@ -282,112 +282,224 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </button>
         </div>
         
-        {/* Add New Playlist - Fixed at top */}
-        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
-          <h4 className="text-sm font-medium text-white">Add New Playlist</h4>
-          <div className="space-y-2">
-            <input 
-              type="text"
-              placeholder="Playlist name (optional)"
-              value={newPlaylistName}
-              onChange={(e) => setNewPlaylistName(e.target.value)}
-              className="w-full px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
-            <input 
-              type="text" 
-              placeholder="https://www.youtube.com/playlist?list=..."
-              value={newPlaylistUrl}
-              onChange={(e) => setNewPlaylistUrl(e.target.value)}
-              className="w-full px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
-            <button 
-              onClick={addPlaylist}
-              disabled={!newPlaylistUrl}
-              className="w-full py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Add Playlist
-            </button>
+        {/* Music Service Selection */}
+        <div className="p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white mb-2">Music Service</h4>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-white/70">Choose your preferred music player:</span>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => updateSettings({ preferredMusicService: 'youtube' })}
+                className={`px-3 py-1 text-xs rounded-lg ${
+                  settings.preferredMusicService === 'youtube'
+                    ? 'bg-pink-600 text-white'
+                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                }`}
+              >
+                YouTube
+              </button>
+              <button
+                onClick={() => updateSettings({ preferredMusicService: 'spotify' })}
+                className={`px-3 py-1 text-xs rounded-lg ${
+                  settings.preferredMusicService === 'spotify'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                }`}
+              >
+                Spotify
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Saved Playlists - Scrollable */}
-        <div className="flex-1 min-h-0">
-          <h4 className="text-sm font-medium text-white mb-2">Saved Playlists</h4>
-          <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
-            {settings.playlists?.length > 0 ? (
-              <div className="space-y-2">
-                {settings.playlists.map((playlist) => (
-                  <div 
-                    key={playlist.id} 
-                    className={`p-2 rounded-lg flex items-center justify-between ${
-                      settings.currentPlaylistId === playlist.id 
-                        ? 'bg-pink-600/20 border border-pink-500/50' 
-                        : 'bg-white/5'
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{playlist.name}</p>
-                      <p className="text-xs text-white/50 truncate">{playlist.url}</p>
-                    </div>
-                    <div className="flex gap-2 ml-2">
-                      <button
-                        onClick={() => updateSettings({ currentPlaylistId: playlist.id })}
-                        className={`px-2 py-1 text-xs rounded ${
-                          settings.currentPlaylistId === playlist.id
-                            ? 'bg-pink-600 text-white'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+        
+        {/* Tabs for YouTube and Spotify */}
+        <div className="flex border-b border-white/10 mb-4">
+          <button 
+            className={`px-4 py-2 text-sm font-medium ${settings.currentSpotifyPlaylistUri ? 'text-white/50' : 'text-white border-b-2 border-pink-500'}`}
+            onClick={() => updateSettings({ currentSpotifyPlaylistUri: null })}
+          >
+            YouTube
+          </button>
+          <button 
+            className={`px-4 py-2 text-sm font-medium ${settings.currentSpotifyPlaylistUri ? 'text-white border-b-2 border-pink-500' : 'text-white/50'}`}
+            onClick={() => {
+              if (settings.spotifyPlaylists.length > 0 && !settings.currentSpotifyPlaylistUri) {
+                updateSettings({ currentSpotifyPlaylistUri: settings.spotifyPlaylists[0].uri });
+              }
+            }}
+          >
+            Spotify
+          </button>
+        </div>
+        
+        {settings.currentSpotifyPlaylistUri ? (
+          // Spotify Playlists Section
+          <>
+            <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+              <h4 className="text-sm font-medium text-white">Spotify Playlists</h4>
+              <p className="text-xs text-white/70">
+                Connect to Spotify using the player in the bottom left corner to access your playlists.
+              </p>
+            </div>
+            
+            {/* Saved Spotify Playlists - Scrollable */}
+            <div className="flex-1 min-h-0">
+              <h4 className="text-sm font-medium text-white mb-2">Your Spotify Playlists</h4>
+              <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
+                {settings.spotifyPlaylists?.length > 0 ? (
+                  <div className="space-y-2">
+                    {settings.spotifyPlaylists.map((playlist) => (
+                      <div 
+                        key={playlist.id} 
+                        className={`p-2 rounded-lg flex items-center justify-between ${
+                          settings.currentSpotifyPlaylistUri === playlist.uri 
+                            ? 'bg-green-600/20 border border-green-500/50' 
+                            : 'bg-white/5'
                         }`}
                       >
-                        {settings.currentPlaylistId === playlist.id ? 'Selected' : 'Select'}
-                      </button>
-                      <button
-                        onClick={() => removePlaylist(playlist.id)}
-                        className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                        <div className="flex items-center flex-1 min-w-0">
+                          {playlist.imageUrl && (
+                            <div className="w-10 h-10 relative rounded overflow-hidden mr-2 flex-shrink-0">
+                              <Image
+                                src={playlist.imageUrl}
+                                alt={playlist.name}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white truncate">{playlist.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-2">
+                          <button
+                            onClick={() => updateSettings({ currentSpotifyPlaylistUri: playlist.uri })}
+                            className={`px-2 py-1 text-xs rounded ${
+                              settings.currentSpotifyPlaylistUri === playlist.uri
+                                ? 'bg-green-600 text-white'
+                                : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                          >
+                            {settings.currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <p className="text-sm text-white/50 italic">
+                    No Spotify playlists found. Connect to Spotify using the player in the bottom left corner.
+                  </p>
+                )}
               </div>
-            ) : (
-              <p className="text-sm text-white/50 italic">No playlists added yet</p>
-            )}
-          </div>
-        </div>
+            </div>
+            
+            {/* Guide for Spotify */}
+            <div className="mt-4 p-3 bg-white/5 rounded-lg">
+              <h4 className="text-sm font-medium text-white mb-1">How to use Spotify</h4>
+              <ol className="text-xs text-white/70 list-decimal pl-4 space-y-1">
+                <li>Click the Spotify icon in the bottom left corner</li>
+                <li>Log in to your Spotify account</li>
+                <li>Your playlists will appear here automatically</li>
+                <li>Select a playlist to play during your focus sessions</li>
+                <li>Control playback from the mini player</li>
+              </ol>
+              <p className="text-xs text-white/50 mt-2">
+                Note: Spotify playback requires a Spotify Premium account
+              </p>
+            </div>
+          </>
+        ) : (
+          // YouTube Playlists Section (Original Content)
+          <>
+            {/* Add New Playlist - Fixed at top */}
+            <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+              <h4 className="text-sm font-medium text-white">Add New YouTube Playlist</h4>
+              <div className="space-y-2">
+                <input 
+                  type="text"
+                  placeholder="Playlist name (optional)"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  className="w-full px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+                />
+                <input 
+                  type="text" 
+                  placeholder="https://www.youtube.com/playlist?list=..."
+                  value={newPlaylistUrl}
+                  onChange={(e) => setNewPlaylistUrl(e.target.value)}
+                  className="w-full px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+                />
+                <button 
+                  onClick={addPlaylist}
+                  disabled={!newPlaylistUrl}
+                  className="w-full py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Playlist
+                </button>
+              </div>
+            </div>
 
-        {/* Guide - Fixed at bottom */}
-        <div className="mt-4 p-3 bg-white/5 rounded-lg">
-          <h4 className="text-sm font-medium text-white mb-2">How to add music:</h4>
-          <ul className="space-y-2 text-xs text-white/70">
-            <li className="flex gap-2">
-              <span>1.</span>
-              <span>Find or create a YouTube playlist</span>
-            </li>
-            <li className="flex gap-2">
-              <span>2.</span>
-              <span>Click &apos;Share&apos; on the playlist</span>
-            </li>
-            <li className="flex gap-2">
-              <span>3.</span>
-              <span>Copy the playlist URL and paste it above</span>
-            </li>
-            <li className="flex gap-2">
-              <span>4.</span>
-              <p>Don&apos;t see your playlist? Make sure it&apos;s public or unlisted</p>
-            </li>
-          </ul>
+            {/* Saved Playlists - Scrollable */}
+            <div className="flex-1 min-h-0">
+              <h4 className="text-sm font-medium text-white mb-2">Saved YouTube Playlists</h4>
+              <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
+                {settings.playlists?.length > 0 ? (
+                  <div className="space-y-2">
+                    {settings.playlists.map((playlist) => (
+                      <div 
+                        key={playlist.id} 
+                        className={`p-2 rounded-lg flex items-center justify-between ${
+                          settings.currentPlaylistId === playlist.id 
+                            ? 'bg-pink-600/20 border border-pink-500/50' 
+                            : 'bg-white/5'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{playlist.name}</p>
+                          <p className="text-xs text-white/50 truncate">{playlist.url}</p>
+                        </div>
+                        <div className="flex gap-2 ml-2">
+                          <button
+                            onClick={() => updateSettings({ currentPlaylistId: playlist.id })}
+                            className={`px-2 py-1 text-xs rounded ${
+                              settings.currentPlaylistId === playlist.id
+                                ? 'bg-pink-600 text-white'
+                                : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                          >
+                            {settings.currentPlaylistId === playlist.id ? 'Selected' : 'Select'}
+                          </button>
+                          <button
+                            onClick={() => removePlaylist(playlist.id)}
+                            className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/50 italic">No playlists added yet</p>
+                )}
+              </div>
+            </div>
 
-          <div className="mt-3 text-xs text-white/50">
-            <p>Recommended: Lofi, ambient, or instrumental music for focus</p>
-            <p className="mt-1">Example playlists:</p>
-            <ul className="mt-1 space-y-1 text-pink-400">
-              <li>• Lofi Girl - beats to study/relax to</li>
-              <li>• ChilledCow - peaceful piano</li>
-              <li>• Ambient Worlds - background music</li>
-            </ul>
-          </div>
-        </div>
+            {/* Guide - Fixed at bottom */}
+            <div className="mt-4 p-3 bg-white/5 rounded-lg">
+              <h4 className="text-sm font-medium text-white mb-1">How to add a YouTube playlist</h4>
+              <ol className="text-xs text-white/70 list-decimal pl-4 space-y-1">
+                <li>Go to YouTube and find a playlist you like</li>
+                <li>Copy the playlist URL from your browser</li>
+                <li>Paste it in the input field above</li>
+                <li>Give it a name (optional)</li>
+                <li>Click &quot;Add Playlist&quot;</li>
+              </ol>
+            </div>
+          </>
+        )}
       </div>
     );
   }

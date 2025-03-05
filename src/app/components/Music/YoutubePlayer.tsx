@@ -44,6 +44,11 @@ const YouTubePlayer = () => {
     setIsLoading(false);
   };
 
+  // Don't render if user has chosen Spotify player
+  if (settings.preferredMusicService === 'spotify') {
+    return null;
+  }
+
   // If no playlist is selected, show a stylish placeholder
   if (!settings.currentPlaylistId) {
     return (

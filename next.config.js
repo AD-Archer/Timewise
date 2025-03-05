@@ -4,7 +4,29 @@ const nextConfig = {
     ignoreDuringBuilds: true, // Only if you want to ignore ESLint during builds
   },
   images: {
-    domains: [], // Add any external image domains here if needed
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.scdn.co',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.spotifycdn.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'platform-lookaside.fbsbx.com',
+        pathname: '**',
+      },
+      // Allow any image domain (use with caution in production)
+      {
+        protocol: 'https',
+        hostname: '**',
+        pathname: '**',
+      }
+    ],
   },
   webpack(config) {
     config.module.rules.push({
