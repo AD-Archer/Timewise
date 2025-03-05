@@ -20,6 +20,7 @@ interface MusicContextType {
   resumeMusic: () => void;
   registerPlayer: (player: SpotifyPlayerInstance) => void;
   isPlaying: boolean;
+  setIsPlaying: (playing: boolean) => void;
 }
 
 // Create the context with a default undefined value
@@ -68,7 +69,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       pauseMusic, 
       resumeMusic, 
       registerPlayer,
-      isPlaying
+      isPlaying,
+      setIsPlaying
     }}>
       {children}
     </MusicContext.Provider>
