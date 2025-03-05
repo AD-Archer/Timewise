@@ -13,6 +13,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { AchievementsProvider } from './contexts/AchievementsContext';
 import { MusicProvider } from './contexts/MusicContext';
+import Clock from "./components/Clock";
 
 export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
@@ -68,6 +69,10 @@ export default function Home() {
                 <BackgroundImage />
                 
                 <div className="relative z-10 w-full max-w-5xl flex flex-col items-center justify-center px-4">
+                  <div className="fixed top-4 left-4">
+                    <Clock />
+                  </div>
+                  
                   <Timer />
                   
                   <button 
