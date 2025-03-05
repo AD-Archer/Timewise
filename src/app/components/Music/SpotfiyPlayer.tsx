@@ -1,8 +1,12 @@
+/**
+ * I would like to thank JoeKarlsson/react-spotify-player for the code that I used to create this component.
+ */
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useMusic } from '../../contexts/MusicContext';
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from 'lucide-react';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -10,7 +14,7 @@ dotenv.config();
 // Replace with your actual Spotify client ID
 const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
 // Use a redirect URI that matches one registered in the Spotify Developer Dashboard
-const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI || 'http://localhost:3000/';
+const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI || 'http://localhost:3000/'; // I'm unsure how to set up this to work in preview with vercel so if you're working on this codebase and want to use vercel for previws... I don't know
 const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
 const RESPONSE_TYPE = 'token';
 const SCOPES = [
@@ -110,6 +114,7 @@ interface SpotifyPlaylistResponse {
 
 export default function SpotifyPlayer() {
   const { settings, updateSettings } = useSettings();
+  const { registerPlayer } = useMusic();
   const [token, setToken] = useState<string | null>(null);
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -377,6 +382,13 @@ export default function SpotifyPlayer() {
       if (!currentPlayer) return;
       
       await currentPlayer.togglePlay();
+      
+      // Update the player state in the MusicContext
+      const state = await currentPlayer.getCurrentState();
+      if (state) {
+        // Update local state based on the player's paused state
+        setIsPlaying(!state.paused);
+      }
     } catch (error) {
       console.error('Error toggling playback:', error);
     }
@@ -437,6 +449,14 @@ export default function SpotifyPlayer() {
       console.error('Error changing volume:', error);
     }
   };
+
+  // Update the player state when it changes
+  useEffect(() => {
+    if (player) {
+      // Register the player with the MusicContext so Timer can pause it
+      registerPlayer(player);
+    }
+  }, [player, registerPlayer]);
 
   // Don't render if user has chosen YouTube player
   if (settings.preferredMusicService === 'youtube') {
