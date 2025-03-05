@@ -1,10 +1,18 @@
 'use client';
+/**
+ * Timer Component
+ * 
+ * Note
+ * It connects with the SpotifyPlayer component through the MusicContext to pause music on timer end I think I could use this to stop youtube but I am unsure how to do it consistently,
+ * 
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pause, Play, RefreshCw } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSound } from '../hooks/useSound';
 import { useAnalytics } from '../contexts/AnalyticsContext';
 import { useAchievements } from '../contexts/AchievementsContext';
+import { useMusic } from '../contexts/MusicContext';
 
 const Timer = () => {
   const { settings, updateSettings } = useSettings();
@@ -13,6 +21,7 @@ const Timer = () => {
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
   const pomodoroCompletedRef = useRef(false);
   const newPomodoroCountRef = useRef(0);
+  const { pauseMusic } = useMusic();
 
   // Sound effects
   const pomodoroEndSound = useSound('/sounds/timer-end.mp3');
@@ -86,6 +95,9 @@ const Timer = () => {
   const handleTimerComplete = useCallback(() => {
     setIsRunning(false);
     
+    // Pause Spotify music when timer ends via MusicContext
+    pauseMusic();
+    
     if (currentMode === 'pomodoro') {
       pomodoroEndSound.play();
       const newCount = settings.pomodoroCount + 1;
@@ -117,7 +129,22 @@ const Timer = () => {
         setIsRunning(true);
       }
     }
-  }, [settings, currentMode, updateSettings, pomodoroEndSound, breakEndSound, recordPomodoroComplete, recordBreakComplete]);
+  }, [
+    currentMode, 
+    settings.pomodoroCount, 
+    settings.targetPomodoros, 
+    settings.autoStartBreaks, 
+    settings.autoStartPomodoros, 
+    settings.durations.pomodoro, 
+    settings.durations.shortBreak,
+    settings.durations.longBreak,
+    updateSettings, 
+    recordPomodoroComplete, 
+    recordBreakComplete, 
+    pomodoroEndSound, 
+    breakEndSound,
+    pauseMusic
+  ]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

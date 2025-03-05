@@ -12,6 +12,7 @@ import { BackgroundProvider } from "./contexts/BackgroundContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { AchievementsProvider } from './contexts/AchievementsContext';
+import { MusicProvider } from './contexts/MusicContext';
 
 export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
@@ -49,56 +50,50 @@ export default function Home() {
   }, []);
 
   return (
-    <SettingsProvider>
-      <AnalyticsProvider>
-        <BackgroundProvider>
+    <main className="flex min-h-screen flex-col items-center justify-center">
+      {showWarning && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md text-center">
+            <h2 className="text-xl font-bold mb-4">Screen Too Small</h2>
+            <p>Your screen is too small to display this application properly. Please use a device with a larger screen.</p>
+          </div>
+        </div>
+      )}
+
+      <SettingsProvider>
+        <AnalyticsProvider>
           <AchievementsProvider>
-            <main className="relative min-h-screen from-gray-900 to-gray-800">
-              <BackgroundImage />
-              {/* <BackgroundSelector /> */}
-
-              <div className="relative flex flex-col min-h-screen">
-                {/* Settings Button */}
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="fixed top-4 right-4 z-40 p-3 bg-black/50 backdrop-blur-sm rounded-full hover:bg-black/70 transition-colors"
-                >
-                  <SettingsIcon className="w-6 h-6 text-white" />
-                </button>
-
-                <div className="flex-grow flex items-center justify-center px-4 mb-4">
-                  <div className="w-full max-w-md">
-                    <Timer />
-                  </div>
+            <BackgroundProvider>
+              <MusicProvider>
+                <BackgroundImage />
+                
+                <div className="relative z-10 w-full max-w-5xl flex flex-col items-center justify-center px-4">
+                  <Timer />
+                  
+                  <button 
+                    onClick={() => setShowSettings(true)}
+                    className="fixed top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-colors"
+                    aria-label="Settings"
+                  >
+                    <SettingsIcon size={24} />
+                  </button>
+                  
+                  {showSettings && (
+                    <SettingsPopup 
+                      isOpen={showSettings}
+                      onClose={handleCloseSettings} 
+                      initialTab={initialSettingsTab}
+                    />
+                  )}
                 </div>
                 
-                {/* YouTube Player - Now at the bottom */}
-                <div className="sticky bottom-0 z-30 w-full">
-                  <YouTubePlayer />
-                </div>
-                
-                {/* Spotify Player */}
+                <YouTubePlayer />
                 <SpotifyPlayer />
-              </div>
-
-              {/* Settings Popup */}
-              <SettingsPopup 
-                isOpen={showSettings} 
-                onClose={handleCloseSettings}
-                initialTab={initialSettingsTab}
-              />
-
-              {showWarning && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-black">
-                  <p className="text-xs text-center text-white">
-                    This site works best on larger screens.
-                  </p>
-                </div>
-              )}
-            </main>
+              </MusicProvider>
+            </BackgroundProvider>
           </AchievementsProvider>
-        </BackgroundProvider>
-      </AnalyticsProvider>
-    </SettingsProvider>
+        </AnalyticsProvider>
+      </SettingsProvider>
+    </main>
   );
 }
