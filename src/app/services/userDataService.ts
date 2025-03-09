@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 // Types for user data
-interface UserSettings {
+export interface UserSettings {
   durations: {
     pomodoro: number;
     shortBreak: number;
@@ -57,12 +57,6 @@ interface Playlist {
   videos: string[];
 }
 
-interface SpotifyPlaylist {
-  id: string;
-  name: string;
-  uri: string;
-}
-
 interface DailyStat {
   date: string;
   completedPomodoros: number;
@@ -84,6 +78,7 @@ interface MoodEntry {
   mood: number;
   productivity?: number;
   notes?: string;
+  tags?: string[];
 }
 
 interface UserMoodData {
@@ -157,5 +152,52 @@ export const saveUserAnalytics = async (userId: string, analytics: UserAnalytics
 
 // Save mood data to Firestore
 export const saveUserMoodData = async (userId: string, moodData: UserMoodData): Promise<void> => {
-  await saveUserData(userId, { moodData });
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    
+    // Force complete overwrite of the moodData field
+    await updateDoc(userDocRef, { 
+      moodData: moodData,
+      updatedAt: new Date()
+    });
+    
+    console.log('Mood data saved to Firestore with complete overwrite');
+  } catch (error) {
+    console.error('Error saving mood data to Firestore:', error);
+    throw error;
+  }
+};
+
+// Completely reset mood data in Firestore (for clearing thousands of entries)
+export const resetUserMoodData = async (userId: string): Promise<void> => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    
+    // Get the current user document
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      // Create a new document without the moodData field
+      const userData = userDoc.data();
+      
+      // Set moodData to an empty object with empty entries array
+      const updatedData = {
+        ...userData,
+        moodData: {
+          entries: []
+        },
+        updatedAt: new Date()
+      };
+      
+      // Completely replace the document
+      await setDoc(userDocRef, updatedData);
+      
+      console.log('Successfully reset mood data in Firestore');
+    } else {
+      console.warn('User document not found when trying to reset mood data');
+    }
+  } catch (error) {
+    console.error('Error resetting mood data in Firestore:', error);
+    throw error;
+  }
 }; 

@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
+import { saveUserMoodData, resetUserMoodData } from '../services/userDataService';
+import { useAuth } from './AuthContext';
+import { useSettings } from './SettingsContext';
 
 // Define the mood entry interface
 export interface MoodEntry {
@@ -19,6 +22,7 @@ interface MoodContextType {
   addEntry: (mood: number, note: string, tags: string[]) => void;
   updateEntry: (id: string, updates: Partial<Omit<MoodEntry, 'id' | 'date'>>) => void;
   deleteEntry: (id: string) => void;
+  clearAllEntries: () => void;
   addTag: (tag: string) => void;
   deleteTag: (tag: string) => void;
   getEntriesByDateRange: (startDate: string, endDate: string) => MoodEntry[];
@@ -39,6 +43,8 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [tags, setTags] = useState<string[]>(defaultTags);
   const [isClient, setIsClient] = useState(false);
+  const { user } = useAuth();
+  const { settings } = useSettings();
 
   // Set isClient to true after initial render
   useEffect(() => {
@@ -69,17 +75,76 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     }
   }, [tags, isClient]);
 
+  // Sync mood data with Firestore when entries change
+  useEffect(() => {
+    const syncMoodDataWithFirestore = async () => {
+      // Only sync if user is logged in and storeMoodDataLocally is false
+      if (user && settings && settings.storeMoodDataLocally === false) {
+        try {
+          // Convert MoodEntry format to UserMoodData format
+          const firestoreMoodData = {
+            entries: entries.map(entry => ({
+              timestamp: new Date(entry.date).getTime(),
+              mood: entry.mood,
+              notes: entry.note,
+              tags: entry.tags // Include tags in the Firestore data
+            }))
+          };
+          
+          await saveUserMoodData(user.uid, firestoreMoodData);
+        } catch (error) {
+          console.error('Error syncing mood data with Firestore:', error);
+        }
+      }
+    };
+
+    syncMoodDataWithFirestore();
+  }, [entries, user, settings]);
+
+  // Sync all local entries to Firestore when user signs in or changes storage preference
+  useEffect(() => {
+    const syncAllLocalEntriesToFirestore = async () => {
+      // Only sync if user is logged in and storeMoodDataLocally is false
+      if (user && settings && settings.storeMoodDataLocally === false && entries.length > 0) {
+        try {
+          // Convert all local MoodEntry format to UserMoodData format
+          const firestoreMoodData = {
+            entries: entries.map(entry => ({
+              timestamp: new Date(entry.date).getTime(),
+              mood: entry.mood,
+              notes: entry.note,
+              tags: entry.tags // Include tags in the Firestore data
+            }))
+          };
+          
+          await saveUserMoodData(user.uid, firestoreMoodData);
+          console.log('Synced all local mood entries to Firestore');
+        } catch (error) {
+          console.error('Error syncing all local mood entries to Firestore:', error);
+        }
+      }
+    };
+
+    syncAllLocalEntriesToFirestore();
+  }, [user, settings, settings?.storeMoodDataLocally, entries]);
+
   // Add a new mood entry
   const addEntry = (mood: number, note: string, tags: string[] = []) => {
-    const newEntry: MoodEntry = {
-      id: `mood-${Date.now()}`, // Generate a unique ID
-      date: new Date().toISOString(),
-      mood,
-      note,
-      tags,
-    };
-    
-    setEntries(prev => [...prev, newEntry]);
+    try {
+      // Generate a random string to ensure uniqueness
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const newEntry: MoodEntry = {
+        id: `mood-${Date.now()}-${randomStr}`, // Generate a unique ID with timestamp and random string
+        date: new Date().toISOString(),
+        mood,
+        note,
+        tags,
+      };
+      
+      setEntries(prev => [...prev, newEntry]);
+    } catch (error) {
+      console.error('Error adding mood entry:', error);
+    }
   };
 
   // Update an existing entry
@@ -96,6 +161,42 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
   // Delete an entry
   const deleteEntry = (id: string) => {
     setEntries(prev => prev.filter(entry => entry.id !== id));
+  };
+
+  // Clear all entries - completely rewritten for reliability
+  const clearAllEntries = () => {
+    if (window.confirm('Are you sure you want to delete ALL mood entries? This cannot be undone and will remove thousands of entries.')) {
+      try {
+        // 1. Clear entries from state immediately
+        setEntries([]);
+        
+        // 2. Clear entries from localStorage immediately
+        setLocalStorage('moodEntries', []);
+        console.log('Cleared all mood entries from localStorage');
+        
+        // 3. If user is logged in, clear from Firestore directly
+        if (user) {
+          // Use the specialized function to completely reset mood data
+          resetUserMoodData(user.uid)
+            .then(() => {
+              console.log('Successfully reset all mood entries in Firestore database');
+              // Show confirmation alert after successful database clear
+              alert('Successfully cleared all mood entries from the database');
+            })
+            .catch(error => {
+              console.error('Failed to clear mood entries from Firestore:', error);
+              alert('Error clearing entries from database. Please try again or contact support.');
+              
+              // Fallback to the old method if the reset fails
+              const emptyMoodData = { entries: [] };
+              return saveUserMoodData(user.uid, emptyMoodData);
+            });
+        }
+      } catch (error) {
+        console.error('Error in clearAllEntries:', error);
+        alert('An error occurred while clearing entries. Please try again.');
+      }
+    }
   };
 
   // Add a new tag
@@ -142,6 +243,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
         addEntry, 
         updateEntry, 
         deleteEntry,
+        clearAllEntries,
         addTag,
         deleteTag,
         getEntriesByDateRange,

@@ -5,7 +5,8 @@ import { useBackground } from '../../contexts/BackgroundContext';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
 import { useMood } from '../../contexts/MoodContext';
-import type { PlaylistInfo, SpotifyPlaylistInfo } from '../../contexts/SettingsContext';
+import { useAuth } from '../../contexts/AuthContext';
+import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
 import Achievements from '../Analytics/Achievements'; 
@@ -22,16 +23,15 @@ const Settings = ({ currentTab }: SettingsProps) => {
     updateSettings, 
     spotifyPlaylists, 
     currentSpotifyPlaylistUri, 
-    updateSpotifyPlaylists, 
     setCurrentSpotifyPlaylistUri,
-    chatHistory,
     clearChatHistory,
     exportChatHistory
   } = useSettings();
   const { backgrounds, currentBackground, setBackground } = useBackground();
   const { analytics, resetAnalytics } = useAnalytics();
   const { resetAchievements } = useAchievements();
-  const { entries, deleteEntry, tags } = useMood();
+  const { entries, deleteEntry, tags, clearAllEntries } = useMood();
+  const { user } = useAuth();
   const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
   const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
   const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
@@ -166,55 +166,25 @@ const Settings = ({ currentTab }: SettingsProps) => {
 
   if (currentTab === 'mood') {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">Mood Tracker Settings</h3>
+          <button 
+            onClick={() => {
+              clearAllEntries();
+              // Toast notification will be shown by the clearAllEntries function
+            }}
+            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+          >
+            Delete All Entries
+          </button>
         </div>
         
-        {/* Mood Tracking Frequency */}
+        {/* Mood History Visibility */}
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
-          <h4 className="text-sm font-medium text-white">Tracking Frequency</h4>
+          <h4 className="text-sm font-medium text-white">Display Settings</h4>
           <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs">Prompt for mood:</label>
-            <select
-              value={settings.moodTrackingFrequency || 'endOfSession'}
-              onChange={(e) => updateSettings({ moodTrackingFrequency: e.target.value as 'endOfSession' | 'endOfPomodoro' | 'daily' | 'manual' })}
-              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
-            >
-              <option value="endOfSession">At the end of each session</option>
-              <option value="endOfPomodoro">After each pomodoro</option>
-              <option value="daily">Once daily</option>
-              <option value="manual">Only when manually triggered</option>
-            </select>
-          </div>
-        </div>
-        
-        {/* Mood Tracking Options */}
-        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
-          <h4 className="text-sm font-medium text-white">Tracking Options</h4>
-          
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs">Enable mood tracking:</label>
-            <input 
-              type="checkbox" 
-              checked={settings.moodTrackingEnabled !== false}
-              onChange={(e) => updateSettings({ moodTrackingEnabled: e.target.checked })} 
-              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs">Track productivity correlation:</label>
-            <input 
-              type="checkbox" 
-              checked={settings.trackProductivityWithMood !== false}
-              onChange={(e) => updateSettings({ trackProductivityWithMood: e.target.checked })} 
-              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs">Show mood history:</label>
+            <label className="text-white/80 text-xs">Show mood history on dashboard:</label>
             <input 
               type="checkbox" 
               checked={settings.showMoodHistory !== false}
@@ -232,92 +202,109 @@ const Settings = ({ currentTab }: SettingsProps) => {
             <input 
               type="checkbox" 
               checked={settings.storeMoodDataLocally !== false}
-              onChange={(e) => updateSettings({ storeMoodDataLocally: e.target.checked })} 
+              onChange={(e) => {
+                const newValue = e.target.checked;
+                
+                // If user is turning off local-only storage, show a confirmation dialog
+                if (!newValue && user) {
+                  if (window.confirm(
+                    "Disabling local-only storage will sync all your mood entries to your cloud account. Continue?"
+                  )) {
+                    updateSettings({ storeMoodDataLocally: newValue });
+                  }
+                } else {
+                  updateSettings({ storeMoodDataLocally: newValue });
+                }
+              }} 
               className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
             />
           </div>
           <p className="text-xs text-white/50 mt-1">
             When enabled, your mood data will only be stored on this device and won&apos;t be synced to the cloud.
+            When disabled, all your mood entries (including those created before signing in) will be synced to your account.
           </p>
         </div>
 
-        {/* Mood Entries Management */}
+        {/* Data Management */}
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Data Management</h4>
+          <p className="text-xs text-white/70 mb-3">
+            You currently have {entries.length} mood entries stored. 
+            Use the button below to permanently delete all your mood entries.
+          </p>
+          <div className="flex justify-center">
+            <button 
+              onClick={clearAllEntries}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Delete All {entries.length} Entries
+            </button>
+          </div>
+        </div>
+
+        {/* Mood Entries Management */}
+        <div className="space-y-4">
           <h4 className="text-sm font-medium text-white">Manage Mood Entries</h4>
           
-          {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Search in notes..."
+                placeholder="Search entries..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-white/50"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-pink-500"
               />
             </div>
-            <div className="flex-1">
+            <div>
               <select
                 value={selectedSearchTag || ''}
-                onChange={(e) => setSelectedSearchTag(e.target.value || null)}
-                className="w-full px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+                onChange={(e) => setSelectedSearchTag(e.target.value === '' ? null : e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-pink-500"
               >
-                <option value="">All Tags</option>
+                <option value="">All tags</option>
                 {tags.map(tag => (
                   <option key={tag} value={tag}>{tag}</option>
                 ))}
               </select>
             </div>
-            {(searchTerm || selectedSearchTag) && (
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedSearchTag(null);
-                }}
-                className="px-3 py-1.5 bg-pink-600/80 hover:bg-pink-600 text-white text-sm rounded-lg transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
           </div>
           
-          {entries.length === 0 ? (
-            <p className="text-white/60 text-sm py-2">No mood entries yet.</p>
-          ) : filteredEntries.length === 0 ? (
-            <p className="text-white/60 text-sm py-2">No entries match your search.</p>
+          {/* Entries Table */}
+          {filteredEntries.length === 0 ? (
+            <div className="text-center py-8 text-white/60">
+              <p>No mood entries found.</p>
+            </div>
           ) : (
-            <div className="max-h-80 overflow-y-auto pr-1">
-              <table className="w-full text-sm text-white/80">
-                <thead className="text-xs uppercase bg-white/10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-white/70 uppercase bg-white/5">
                   <tr>
-                    <th className="px-2 py-2 text-left">Date</th>
-                    <th className="px-2 py-2 text-left">Mood</th>
-                    <th className="px-2 py-2 text-left">Note</th>
-                    <th className="px-2 py-2 text-left">Tags</th>
-                    <th className="px-2 py-2 text-right">Action</th>
+                    <th className="px-2 py-2">Date & Mood</th>
+                    <th className="px-2 py-2">Note</th>
+                    <th className="px-2 py-2">Tags</th>
+                    <th className="px-2 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEntries.slice().reverse().map(entry => (
-                    <tr key={entry.id} className="border-b border-white/10 hover:bg-white/5">
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        {format(new Date(entry.date), 'MMM d, yyyy h:mm a')}
+                  {filteredEntries.slice().reverse().map((entry, index) => (
+                    <tr key={`${entry.id}-${index}`} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="px-2 py-2">
+                        <div className="flex items-center">
+                          {renderMoodIcon(entry.mood)}
+                          <span className="ml-2 text-white">{format(new Date(entry.date), 'MMM d, yyyy h:mm a')}</span>
+                        </div>
                       </td>
-                      <td className="px-2 py-2 text-center">
-                        {renderMoodIcon(entry.mood)}
-                      </td>
-                      <td className="px-2 py-2 truncate max-w-[150px]">
-                        {entry.note || <span className="text-white/40">No note</span>}
+                      <td className="px-2 py-2 text-white">
+                        {entry.note || <span className="text-white/40 text-xs">No note</span>}
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-1">
                           {entry.tags && entry.tags.length > 0 ? (
-                            entry.tags.map(tag => (
-                              <span 
-                                key={tag} 
-                                className="px-1.5 py-0.5 bg-white/10 rounded-full text-xs text-white/80 cursor-pointer hover:bg-pink-600/30"
-                                onClick={() => setSelectedSearchTag(tag)}
-                              >
+                            entry.tags.map((tag, tagIndex) => (
+                              <span key={`${tag}-${tagIndex}`} className="px-2 py-0.5 bg-white/10 rounded-full text-xs text-white/80">
                                 {tag}
                               </span>
                             ))
@@ -327,17 +314,19 @@ const Settings = ({ currentTab }: SettingsProps) => {
                         </div>
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <button 
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this mood entry?')) {
-                              deleteEntry(entry.id);
-                            }
-                          }}
-                          className="p-1 text-red-400 hover:text-red-300 transition-colors"
-                          aria-label="Delete entry"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex justify-end space-x-2">
+                          <button 
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this mood entry?')) {
+                                deleteEntry(entry.id);
+                              }
+                            }}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                            aria-label="Delete entry"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
