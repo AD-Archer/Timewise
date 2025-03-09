@@ -363,8 +363,8 @@ const MoodTracker = () => {
             <div className="mt-6">
               <h3 className="text-lg text-white mb-2">Recent Entries</h3>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {entries.slice().reverse().slice(0, 5).map(entry => (
-                  <div key={entry.id} className="p-3 bg-white/10 rounded-lg flex items-start gap-3">
+                {entries.slice().reverse().slice(0, 5).map((entry, index) => (
+                  <div key={`${entry.id}-${index}`} className="p-3 bg-white/10 rounded-lg flex items-start gap-3">
                     <div className="mt-1">
                       {renderMoodIcon(6 - entry.mood)}
                     </div>
@@ -377,8 +377,8 @@ const MoodTracker = () => {
                       )}
                       {entry.tags && entry.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {entry.tags.map(tag => (
-                            <span key={tag} className="px-2 py-0.5 bg-white/10 rounded-full text-xs text-white/80">
+                          {entry.tags.map((tag, tagIndex) => (
+                            <span key={`${tag}-${tagIndex}`} className="px-2 py-0.5 bg-white/10 rounded-full text-xs text-white/80">
                               {tag}
                             </span>
                           ))}

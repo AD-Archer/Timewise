@@ -21,6 +21,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useSettings } from "./contexts/SettingsContext";
 import { saveUserSettings, loadUserData } from "./services/userDataService";
 import type { PlaylistInfo } from './contexts/SettingsContext';
+import { useMood } from "./contexts/MoodContext";
 
 // Define the Playlist type to match userDataService
 interface Playlist {
@@ -32,6 +33,7 @@ interface Playlist {
 export default function Home() {
   const { user } = useAuth();
   const { settings, updateSettings } = useSettings();
+  const { entries, addEntry } = useMood();
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements'>('timer');
@@ -69,6 +71,43 @@ export default function Home() {
             
             updateSettings(compatibleSettings as any);
           }
+          
+          // Load mood data if it exists and storeMoodDataLocally is false
+          if (userData && userData.moodData && userData.settings && userData.settings.storeMoodDataLocally === false) {
+            // Convert Firestore mood data format to MoodContext format
+            if (userData.moodData.entries && Array.isArray(userData.moodData.entries)) {
+              userData.moodData.entries.forEach(entry => {
+                try {
+                  if (!entry || typeof entry !== 'object') {
+                    console.warn('Invalid entry format:', entry);
+                    return;
+                  }
+                  
+                  // Check if this entry already exists in local storage to avoid duplicates
+                  const timestamp = entry.timestamp;
+                  if (!timestamp) {
+                    console.warn('Entry missing timestamp:', entry);
+                    return;
+                  }
+                  
+                  const entryDate = new Date(timestamp).toISOString();
+                  const existingEntry = entries.find(e => new Date(e.date).getTime() === timestamp);
+                  
+                  if (!existingEntry) {
+                    addEntry(
+                      entry.mood || 3, // Default to neutral mood if missing
+                      entry.notes || '',
+                      entry.tags || [] // Use tags from Firestore if available
+                    );
+                  }
+                } catch (entryError) {
+                  console.error('Error processing mood entry:', entryError, entry);
+                }
+              });
+            } else {
+              console.log('No mood entries found or entries is not an array:', userData.moodData);
+            }
+          }
         } catch (error) {
           console.error('Error loading user data:', error);
         }
@@ -76,7 +115,7 @@ export default function Home() {
     };
 
     loadUserDataFromFirestore();
-  }, [user, updateSettings]);
+  }, [user, updateSettings, entries, addEntry]);
 
   // Save user data to Firestore when settings change
   useEffect(() => {
