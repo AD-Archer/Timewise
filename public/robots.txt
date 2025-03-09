@@ -1,0 +1,9 @@
+# Timewise robots.txt
+User-agent: *
+Allow: /
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://timewise.adarcher.app/sitemap.xml 
