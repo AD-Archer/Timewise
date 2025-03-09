@@ -16,6 +16,7 @@ interface AchievementsContextType {
   resetAchievements: () => void;
 }
 // these are the default achievements that will be used by acheivements.tsx
+// when I add a database I'm debating on wherter or now I should stop users from being able to edit the achievements by storing this. But I don't think I'll get away with that
 const defaultAchievements: Achievement[] = [
   { id: '1', title: 'First Pomodoro', description: 'Complete your first Pomodoro session.', unlocked: false },
   { id: '2', title: 'Streak Starter', description: 'Complete 3 Pomodoro sessions in a row.', unlocked: false },

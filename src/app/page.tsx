@@ -1,24 +1,24 @@
 'use client';
 
+import { useState, useEffect, useCallback } from "react";
 import Timer from "./components/Timer/Timer";
-// import BackgroundSelector from "./components/Background";
+import MoodTracker from "./components/MoodTracker/MoodTracker";
+import TabNavigation from "./components/TabNavigation";
 import BackgroundImage from "./components/Background/BackgroundImage";
 import SettingsPopup from "./components/Settings/SettingsPopup";
-import { Settings as SettingsIcon, ChevronUp, ChevronDown } from 'lucide-react';
-import { useState, useEffect, useCallback } from "react";
+import { Settings as SettingsIcon } from 'lucide-react';
 import YouTubePlayer from "./components/Music/YoutubePlayer";
 import SpotifyPlayer from "./components/Music/SpotifyPlayer";
 import { BackgroundProvider } from "./contexts/BackgroundContext";
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { MusicProvider } from './contexts/MusicContext';
 import Clock from "./components/Clock";
-import TimerPresets from "./components/Timer/TimerPresets";
 
 export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements'>('timer');
-  const [showPresets, setShowPresets] = useState(false);
+  const [activeTab, setActiveTab] = useState<'mood' | 'timer'>('mood');
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -52,9 +52,9 @@ export default function Home() {
     window.dispatchEvent(new Event('settingsPopupClosed'));
   }, []);
 
-  // Toggle presets visibility
-  const togglePresets = useCallback(() => {
-    setShowPresets(prev => !prev);
+  // Handle tab change
+  const handleTabChange = useCallback((tab: 'mood' | 'timer') => {
+    setActiveTab(tab);
   }, []);
 
   return (
@@ -78,38 +78,20 @@ export default function Home() {
                 <Clock />
               </div>
               
-              <div className="flex flex-col md:flex-row gap-6 items-center md:items-start w-full">
-                <div className="w-full md:w-auto">
+              {/* Tab Content */}
+              <div className="w-full flex justify-center">
+                {activeTab === 'mood' ? (
+                  <MoodTracker />
+                ) : (
                   <Timer />
-                </div>
-                
-                {/* Presets section - always visible on desktop, conditionally visible on mobile */}
-                {(!isMobile || showPresets) && (
-                  <div className="w-full md:w-auto transition-all duration-300 animate-fade-in">
-                    <TimerPresets />
-                  </div>
                 )}
               </div>
               
-              {/* Toggle presets button - visible only on mobile */}
-              {isMobile && (
-                <button
-                  onClick={togglePresets}
-                  className="mt-4 px-4 py-2 bg-pink-600 text-white rounded-full flex items-center gap-1"
-                >
-                  {showPresets ? (
-                    <>
-                      <ChevronUp size={16} />
-                      <span>Hide Presets</span>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown size={16} />
-                      <span>Show Presets</span>
-                    </>
-                  )}
-                </button>
-              )}
+              {/* Tab Navigation */}
+              <TabNavigation 
+                activeTab={activeTab} 
+                onTabChange={handleTabChange} 
+              />
               
               <button 
                 onClick={() => setShowSettings(true)}

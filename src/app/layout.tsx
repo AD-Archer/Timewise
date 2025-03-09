@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AchievementsProvider } from './contexts/AchievementsContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { TimerProvider } from './contexts/TimerContext';
+import { MoodProvider } from './contexts/MoodContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Timewise - Pomodoro Timer",
-  description: "A simple and cute pomodoro timer to help you stay focused and productive.",
+  title: "Timewise & Mood Tracker",
+  description: "Track your mood and manage your time with this simple and beautiful app.",
   metadataBase: new URL('https://timewise.adarcher.app'),
   
   // Basic metadata
@@ -31,8 +32,8 @@ export const metadata: Metadata = {
   
   // Open Graph metadata
   openGraph: {
-    title: 'Timewise - Pomodoro Timer',
-    description: 'A simple and cute pomodoro timer to help you stay focused and productive.',
+    title: 'Timewise & Mood Tracker',
+    description: 'Track your mood and manage your time with this simple and beautiful app.',
     type: 'website',
     images: [
       {
@@ -47,14 +48,14 @@ export const metadata: Metadata = {
   // Twitter metadata
   twitter: {
     card: 'summary_large_image',
-    title: 'Timewise - Pomodoro Timer',
-    description: 'A simple and cute pomodoro timer to help you stay focused and productive.',
+    title: 'Timewise & Mood Tracker',
+    description: 'Track your mood and manage your time with this simple and beautiful app.',
     images: ['/timewise.svg'],
   },
   
   // Additional metadata
-  keywords: ['pomodoro', 'timer', 'productivity', 'focus', 'study'],
-  authors: [{ name: 'Ad_archer_', url: 'https://github.com/adarcher' }], // Optional: Add your name
+  keywords: ['mood tracker', 'pomodoro', 'timer', 'productivity', 'focus', 'study', 'mental health'],
+  authors: [{ name: 'Ad_archer_', url: 'https://github.com/adarcher' }],
 };
 
 export const viewport: Viewport = {
@@ -81,8 +82,10 @@ export default function RootLayout({
         <SettingsProvider>
           <AchievementsProvider>
             <TimerProvider>
-              {children}
-              <ToastContainer />
+              <MoodProvider>
+                {children}
+                <ToastContainer />
+              </MoodProvider>
             </TimerProvider>
           </AchievementsProvider>
         </SettingsProvider>
