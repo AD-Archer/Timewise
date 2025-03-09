@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Lock down all access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // User data rules
+    match /users/{userId} {
+      // Allow users to read and write only their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Validate settings structure based on SettingsContext.tsx
+      allow update: if request.auth != null && 
+                     request.auth.uid == userId && 
+                     isValidUserData();
+    }
+    
+    // Function to validate user data structure
+    function isValidUserData() {
+      let incomingData = request.resource.data;
+      
+      // If settings is being updated, validate its structure
+      return !('settings' in incomingData) || isValidSettings(incomingData.settings);
+    }
+    
+    // Function to validate settings structure based on SettingsContext.tsx
+    function isValidSettings(settings) {
+      // Check if settings is a map
+      return settings is map && 
+        
+        // Validate durations
+        ('durations' in settings && 
+         settings.durations is map && 
+         'pomodoro' in settings.durations && 
+         'shortBreak' in settings.durations && 
+         'longBreak' in settings.durations) &&
+        
+        // Validate basic settings
+        ('pomodoroCount' in settings && settings.pomodoroCount is number) &&
+        ('targetPomodoros' in settings && settings.targetPomodoros is number) &&
+        ('autoStartBreaks' in settings && settings.autoStartBreaks is bool) &&
+        ('autoStartPomodoros' in settings && settings.autoStartPomodoros is bool) &&
+        
+        // Validate playlist settings (YouTube only, no Spotify playlists)
+        ('playlists' in settings && settings.playlists is list) &&
+        ('currentPlaylistId' in settings) &&
+        ('preferredMusicService' in settings && 
+         (settings.preferredMusicService == 'youtube' || settings.preferredMusicService == 'spotify')) &&
+        
+        // Validate sound settings
+        ('soundEnabled' in settings && settings.soundEnabled is bool) &&
+        ('soundVolume' in settings && settings.soundVolume is number) &&
+        
+        // Validate timer presets
+        ('timerPresets' in settings && settings.timerPresets is list) &&
+        ('currentPresetId' in settings) &&
+        
+        // Validate achievements
+        ('achievements' in settings && settings.achievements is list) &&
+        ('achievementsEnabled' in settings && settings.achievementsEnabled is bool) &&
+        
+        // Mood tracker settings are optional, but if present, validate them
+        (!('moodTrackingEnabled' in settings) || settings.moodTrackingEnabled is bool) &&
+        (!('moodTrackingFrequency' in settings) || 
+         (settings.moodTrackingFrequency in ['endOfSession', 'endOfPomodoro', 'daily', 'manual'])) &&
+        (!('trackProductivityWithMood' in settings) || settings.trackProductivityWithMood is bool) &&
+        (!('showMoodHistory' in settings) || settings.showMoodHistory is bool) &&
+        (!('storeMoodDataLocally' in settings) || settings.storeMoodDataLocally is bool) &&
+        
+        // Chatbot settings are optional, but if present, validate them
+        (!('chatbotEnabled' in settings) || settings.chatbotEnabled is bool) &&
+        (!('chatbotProactiveSuggestions' in settings) || settings.chatbotProactiveSuggestions is bool) &&
+        (!('chatbotPersonality' in settings) || 
+         (settings.chatbotPersonality in ['supportive', 'direct', 'humorous', 'analytical'])) &&
+        (!('chatbotModel' in settings) || 
+         (settings.chatbotModel in ['gpt-3.5-turbo', 'gpt-4'])) &&
+        (!('customOpenAIKey' in settings) || settings.customOpenAIKey is string) &&
+        (!('chatExportEnabled' in settings) || settings.chatExportEnabled is bool);
+    }
+  }
+} 

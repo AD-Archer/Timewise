@@ -4,21 +4,34 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useBackground } from '../../contexts/BackgroundContext';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
-import type { PlaylistInfo } from '../../contexts/SettingsContext';
+import { useMood } from '../../contexts/MoodContext';
+import type { PlaylistInfo, SpotifyPlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
-import { Target, Clock, Flame, Award } from 'lucide-react';
-import Achievements from '../analytics/Achievements'; 
-import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
+import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
+import Achievements from '../Analytics/Achievements'; 
+import AnalyticsDisplay from '../Analytics/AnalyticsDisplay';
+import { format } from 'date-fns';
 
 interface SettingsProps {
-  currentTab: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
+  currentTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
-  const { settings, updateSettings } = useSettings();
+  const { 
+    settings, 
+    updateSettings, 
+    spotifyPlaylists, 
+    currentSpotifyPlaylistUri, 
+    updateSpotifyPlaylists, 
+    setCurrentSpotifyPlaylistUri,
+    chatHistory,
+    clearChatHistory,
+    exportChatHistory
+  } = useSettings();
   const { backgrounds, currentBackground, setBackground } = useBackground();
   const { analytics, resetAnalytics } = useAnalytics();
   const { resetAchievements } = useAchievements();
+  const { entries, deleteEntry, tags } = useMood();
   const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
   const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
   const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
@@ -27,6 +40,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const [autoStartPomodoros, setAutoStartPomodoros] = useState(settings.autoStartPomodoros);
   const [newPlaylistUrl, setNewPlaylistUrl] = useState('');
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSearchTag, setSelectedSearchTag] = useState<string | null>(null);
 
   useEffect(() => {
     setPomodoro(Math.floor(settings.durations.pomodoro / 60));
@@ -74,6 +89,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
       id: playlistId,
       name: newPlaylistName || 'Untitled Playlist',
       url: newPlaylistUrl,
+      videos: [],
     };
 
     const updatedPlaylists = [...(settings.playlists || []), newPlaylist];
@@ -123,6 +139,216 @@ const Settings = ({ currentTab }: SettingsProps) => {
     const mins = minutes % 60;
     return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
   };
+
+  // Render mood icon based on mood value (1-5 scale, where 1 is good and 5 is bad)
+  const renderMoodIcon = (mood: number) => {
+    const moodValue = 6 - mood; // Convert to 5=good, 1=bad scale for display
+    switch (moodValue) {
+      case 1: return <span className="text-red-500">😞</span>;
+      case 2: return <span className="text-orange-500">😕</span>;
+      case 3: return <span className="text-yellow-500">😐</span>;
+      case 4: return <span className="text-green-500">🙂</span>;
+      case 5: return <span className="text-pink-500">😍</span>;
+      default: return null;
+    }
+  };
+
+  // Filter mood entries based on search term and selected tag
+  const filteredEntries = entries.filter(entry => {
+    const matchesSearchTerm = searchTerm === '' || 
+      (entry.note && entry.note.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesTag = selectedSearchTag === null || 
+      (entry.tags && entry.tags.includes(selectedSearchTag));
+    
+    return matchesSearchTerm && matchesTag;
+  });
+
+  if (currentTab === 'mood') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Mood Tracker Settings</h3>
+        </div>
+        
+        {/* Mood Tracking Frequency */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Tracking Frequency</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Prompt for mood:</label>
+            <select
+              value={settings.moodTrackingFrequency || 'endOfSession'}
+              onChange={(e) => updateSettings({ moodTrackingFrequency: e.target.value as 'endOfSession' | 'endOfPomodoro' | 'daily' | 'manual' })}
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            >
+              <option value="endOfSession">At the end of each session</option>
+              <option value="endOfPomodoro">After each pomodoro</option>
+              <option value="daily">Once daily</option>
+              <option value="manual">Only when manually triggered</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Mood Tracking Options */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Tracking Options</h4>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Enable mood tracking:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.moodTrackingEnabled !== false}
+              onChange={(e) => updateSettings({ moodTrackingEnabled: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Track productivity correlation:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.trackProductivityWithMood !== false}
+              onChange={(e) => updateSettings({ trackProductivityWithMood: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Show mood history:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.showMoodHistory !== false}
+              onChange={(e) => updateSettings({ showMoodHistory: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+        </div>
+        
+        {/* Data Privacy */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Data Privacy</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Store mood data locally only:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.storeMoodDataLocally !== false}
+              onChange={(e) => updateSettings({ storeMoodDataLocally: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          <p className="text-xs text-white/50 mt-1">
+            When enabled, your mood data will only be stored on this device and won&apos;t be synced to the cloud.
+          </p>
+        </div>
+
+        {/* Mood Entries Management */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Manage Mood Entries</h4>
+          
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search in notes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-white/50"
+              />
+            </div>
+            <div className="flex-1">
+              <select
+                value={selectedSearchTag || ''}
+                onChange={(e) => setSelectedSearchTag(e.target.value || null)}
+                className="w-full px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              >
+                <option value="">All Tags</option>
+                {tags.map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+            </div>
+            {(searchTerm || selectedSearchTag) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedSearchTag(null);
+                }}
+                className="px-3 py-1.5 bg-pink-600/80 hover:bg-pink-600 text-white text-sm rounded-lg transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+          
+          {entries.length === 0 ? (
+            <p className="text-white/60 text-sm py-2">No mood entries yet.</p>
+          ) : filteredEntries.length === 0 ? (
+            <p className="text-white/60 text-sm py-2">No entries match your search.</p>
+          ) : (
+            <div className="max-h-80 overflow-y-auto pr-1">
+              <table className="w-full text-sm text-white/80">
+                <thead className="text-xs uppercase bg-white/10">
+                  <tr>
+                    <th className="px-2 py-2 text-left">Date</th>
+                    <th className="px-2 py-2 text-left">Mood</th>
+                    <th className="px-2 py-2 text-left">Note</th>
+                    <th className="px-2 py-2 text-left">Tags</th>
+                    <th className="px-2 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEntries.slice().reverse().map(entry => (
+                    <tr key={entry.id} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        {format(new Date(entry.date), 'MMM d, yyyy h:mm a')}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        {renderMoodIcon(entry.mood)}
+                      </td>
+                      <td className="px-2 py-2 truncate max-w-[150px]">
+                        {entry.note || <span className="text-white/40">No note</span>}
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {entry.tags && entry.tags.length > 0 ? (
+                            entry.tags.map(tag => (
+                              <span 
+                                key={tag} 
+                                className="px-1.5 py-0.5 bg-white/10 rounded-full text-xs text-white/80 cursor-pointer hover:bg-pink-600/30"
+                                onClick={() => setSelectedSearchTag(tag)}
+                              >
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-white/40 text-xs">No tags</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <button 
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this mood entry?')) {
+                              deleteEntry(entry.id);
+                            }
+                          }}
+                          className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                          aria-label="Delete entry"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (currentTab === 'timer') {
     return (
@@ -243,6 +469,127 @@ const Settings = ({ currentTab }: SettingsProps) => {
     );
   }
 
+  if (currentTab === 'chatbot') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Chatbot Settings</h3>
+        </div>
+        
+        {/* Chatbot Enablement */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Chatbot Features</h4>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Enable chatbot assistant:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.chatbotEnabled !== false}
+              onChange={(e) => updateSettings({ chatbotEnabled: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Proactive suggestions:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.chatbotProactiveSuggestions !== false}
+              onChange={(e) => updateSettings({ chatbotProactiveSuggestions: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <p className="text-xs text-white/50 mt-1">
+            When enabled, the chatbot will occasionally offer productivity tips and suggestions.
+          </p>
+        </div>
+        
+        {/* Chatbot Personality */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Chatbot Personality</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Personality style:</label>
+            <select
+              value={settings.chatbotPersonality || 'supportive'}
+              onChange={(e) => updateSettings({ chatbotPersonality: e.target.value as 'supportive' | 'direct' | 'humorous' | 'analytical' })}
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            >
+              <option value="supportive">Supportive & Encouraging</option>
+              <option value="direct">Direct & Efficient</option>
+              <option value="humorous">Humorous & Light</option>
+              <option value="analytical">Analytical & Detailed</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* API Settings */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">API Settings</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Model:</label>
+            <select
+              value={settings.chatbotModel || 'gpt-3.5-turbo'}
+              onChange={(e) => updateSettings({ chatbotModel: e.target.value as 'gpt-3.5-turbo' | 'gpt-4' })}
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            >
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster)</option>
+              <option value="gpt-4">GPT-4 (More Capable)</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <label className="text-white/80 text-xs">Custom API Key (optional):</label>
+            <input 
+              type="password" 
+              value={settings.customOpenAIKey || ''}
+              onChange={(e) => updateSettings({ customOpenAIKey: e.target.value })}
+              placeholder="sk-..."
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            />
+          </div>
+          <p className="text-xs text-white/50 mt-1">
+            If provided, your own API key will be used instead of the shared one. Your key is stored locally and never sent to our servers.
+          </p>
+        </div>
+        
+        {/* Data Privacy */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Privacy Settings</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Enable chat history export:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.chatExportEnabled !== false}
+              onChange={(e) => updateSettings({ chatExportEnabled: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          <div className="flex gap-2 mt-2">
+            <button 
+              onClick={() => {
+                if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                  clearChatHistory();
+                }
+              }}
+              className="text-xs px-2 py-1 bg-red-600/30 hover:bg-red-600/50 text-white rounded transition-colors"
+            >
+              Clear Chat History
+            </button>
+            {settings.chatExportEnabled && (
+              <button 
+                onClick={exportChatHistory}
+                className="text-xs px-2 py-1 bg-blue-600/30 hover:bg-blue-600/50 text-white rounded transition-colors"
+              >
+                Export Chat History
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (currentTab === 'background') {
     return (
       <div className="space-y-4">
@@ -316,16 +663,16 @@ const Settings = ({ currentTab }: SettingsProps) => {
         {/* Tabs for YouTube and Spotify */}
         <div className="flex border-b border-white/10 mb-4">
           <button 
-            className={`px-4 py-2 text-sm font-medium ${settings.currentSpotifyPlaylistUri ? 'text-white/50' : 'text-white border-b-2 border-pink-500'}`}
-            onClick={() => updateSettings({ currentSpotifyPlaylistUri: null })}
+            className={`px-4 py-2 text-sm font-medium ${currentSpotifyPlaylistUri ? 'text-white/50' : 'text-white border-b-2 border-pink-500'}`}
+            onClick={() => setCurrentSpotifyPlaylistUri(null)}
           >
             YouTube
           </button>
           <button 
-            className={`px-4 py-2 text-sm font-medium ${settings.currentSpotifyPlaylistUri ? 'text-white border-b-2 border-pink-500' : 'text-white/50'}`}
+            className={`px-4 py-2 text-sm font-medium ${currentSpotifyPlaylistUri ? 'text-white border-b-2 border-pink-500' : 'text-white/50'}`}
             onClick={() => {
-              if (settings.spotifyPlaylists.length > 0 && !settings.currentSpotifyPlaylistUri) {
-                updateSettings({ currentSpotifyPlaylistUri: settings.spotifyPlaylists[0].uri });
+              if (spotifyPlaylists.length > 0 && !currentSpotifyPlaylistUri) {
+                setCurrentSpotifyPlaylistUri(spotifyPlaylists[0].uri);
               }
             }}
           >
@@ -333,7 +680,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </button>
         </div>
         
-        {settings.currentSpotifyPlaylistUri ? (
+        {currentSpotifyPlaylistUri ? (
           // Spotify Playlists Section
           <>
             <div className="space-y-2 p-3 bg-white/5 rounded-lg">
@@ -347,13 +694,13 @@ const Settings = ({ currentTab }: SettingsProps) => {
             <div className="flex-1 min-h-0">
               <h4 className="text-sm font-medium text-white mb-2">Your Spotify Playlists</h4>
               <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
-                {settings.spotifyPlaylists?.length > 0 ? (
+                {spotifyPlaylists?.length > 0 ? (
                   <div className="space-y-2">
-                    {settings.spotifyPlaylists.map((playlist) => (
+                    {spotifyPlaylists.map((playlist) => (
                       <div 
                         key={playlist.id} 
                         className={`p-2 rounded-lg flex items-center justify-between ${
-                          settings.currentSpotifyPlaylistUri === playlist.uri 
+                          currentSpotifyPlaylistUri === playlist.uri 
                             ? 'bg-green-600/20 border border-green-500/50' 
                             : 'bg-white/5'
                         }`}
@@ -375,14 +722,14 @@ const Settings = ({ currentTab }: SettingsProps) => {
                         </div>
                         <div className="flex gap-2 ml-2">
                           <button
-                            onClick={() => updateSettings({ currentSpotifyPlaylistUri: playlist.uri })}
+                            onClick={() => setCurrentSpotifyPlaylistUri(playlist.uri)}
                             className={`px-2 py-1 text-xs rounded ${
-                              settings.currentSpotifyPlaylistUri === playlist.uri
+                              currentSpotifyPlaylistUri === playlist.uri
                                 ? 'bg-green-600 text-white'
                                 : 'bg-white/10 text-white/70 hover:bg-white/20'
                             }`}
                           >
-                            {settings.currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
+                            {currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
                           </button>
                         </div>
                       </div>

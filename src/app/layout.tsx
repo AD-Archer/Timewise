@@ -7,6 +7,7 @@ import { AchievementsProvider } from './contexts/AchievementsContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { TimerProvider } from './contexts/TimerContext';
 import { MoodProvider } from './contexts/MoodContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -79,16 +80,18 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/timewise.svg" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <SettingsProvider>
-          <AchievementsProvider>
-            <TimerProvider>
-              <MoodProvider>
-                {children}
-                <ToastContainer />
-              </MoodProvider>
-            </TimerProvider>
-          </AchievementsProvider>
-        </SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <AchievementsProvider>
+              <TimerProvider>
+                <MoodProvider>
+                  {children}
+                  <ToastContainer />
+                </MoodProvider>
+              </TimerProvider>
+            </AchievementsProvider>
+          </SettingsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -113,7 +113,14 @@ interface SpotifyPlaylistResponse {
 }
 
 export default function SpotifyPlayer() {
-  const { settings, updateSettings } = useSettings();
+  const { 
+    settings, 
+    updateSettings, 
+    spotifyPlaylists, 
+    currentSpotifyPlaylistUri, 
+    updateSpotifyPlaylists, 
+    setCurrentSpotifyPlaylistUri 
+  } = useSettings();
   const { registerPlayer, setIsPlaying: setMusicContextPlaying } = useMusic();
   const [token, setToken] = useState<string | null>(null);
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
@@ -158,14 +165,14 @@ export default function SpotifyPlayer() {
     updateSettings({ preferredMusicService: 'spotify' });
     
     // If there are Spotify playlists and none is selected, select the first one
-    if (settings.spotifyPlaylists?.length > 0 && !settings.currentSpotifyPlaylistUri) {
-      updateSettings({ currentSpotifyPlaylistUri: settings.spotifyPlaylists[0].uri });
+    if (spotifyPlaylists?.length > 0 && !currentSpotifyPlaylistUri) {
+      setCurrentSpotifyPlaylistUri(spotifyPlaylists[0].uri);
     }
     
     // Create a custom event to tell the settings component to switch to the music tab
     const event = new CustomEvent('openSettingsTab', { detail: { tab: 'music' } });
     window.dispatchEvent(event);
-  }, [settings.spotifyPlaylists, settings.currentSpotifyPlaylistUri, updateSettings]);
+  }, [spotifyPlaylists, currentSpotifyPlaylistUri, updateSettings, setCurrentSpotifyPlaylistUri]);
 
   // Listen for the custom event in the main app component
   useEffect(() => {
@@ -297,46 +304,58 @@ export default function SpotifyPlayer() {
     }
   }, []);
 
-  // Fetch user's playlists when token is available
+  // Fetch user's playlists
   useEffect(() => {
-    if (!token) return;
-
-    const fetchPlaylists = async () => {
+    const fetchUserPlaylists = async () => {
+      if (!token) return;
+      
       try {
-        const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Token expired, clear it
-            logout();
-            return;
-          }
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json() as SpotifyPlaylistResponse;
-        const fetchedPlaylists: SpotifyPlaylistInfo[] = data.items.map((playlist) => ({
-          id: playlist.id,
-          name: playlist.name,
-          uri: playlist.uri,
-          imageUrl: playlist.images && playlist.images.length > 0 ? playlist.images[0].url : undefined
-        }));
+        const fetchedPlaylists = await fetchPlaylists();
         
-        // Update settings with Spotify playlists if needed
-        if (fetchedPlaylists.length > 0 && !settings.spotifyPlaylists?.some(p => 
+        // If we have playlists and none of them are in settings, add them
+        if (fetchedPlaylists.length > 0 && !spotifyPlaylists?.some(p => 
           fetchedPlaylists.some(fp => fp.id === p.id)
         )) {
-          updateSettings({ spotifyPlaylists: fetchedPlaylists });
+          // Update the playlists in settings
+          updateSpotifyPlaylists(fetchedPlaylists);
         }
       } catch (error) {
         console.error('Error fetching playlists:', error);
+        logout();
       }
     };
+    
+    fetchUserPlaylists();
+  }, [token, spotifyPlaylists, updateSpotifyPlaylists, logout]);
 
-    fetchPlaylists();
-  }, [token, settings.spotifyPlaylists, updateSettings, logout]);
+  // Fetch playlists from Spotify API
+  const fetchPlaylists = async (): Promise<SpotifyPlaylistInfo[]> => {
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired, clear it
+          logout();
+          return [];
+        }
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json() as SpotifyPlaylistResponse;
+      return data.items.map((playlist) => ({
+        id: playlist.id,
+        name: playlist.name,
+        uri: playlist.uri,
+        imageUrl: playlist.images && playlist.images.length > 0 ? playlist.images[0].url : undefined
+      }));
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      return [];
+    }
+  };
 
   // Play a specific playlist
   const playPlaylist = useCallback(async (playlistUri: string) => {
@@ -363,38 +382,38 @@ export default function SpotifyPlayer() {
 
   // Play the current Spotify playlist from settings
   useEffect(() => {
-    if (!token || !deviceId || !settings.currentSpotifyPlaylistUri) return;
+    if (!token || !deviceId || !currentSpotifyPlaylistUri) return;
     
     // Log when the playlist changes
-    console.log('Current playlist URI changed to:', settings.currentSpotifyPlaylistUri);
+    console.log('Current playlist URI changed to:', currentSpotifyPlaylistUri);
     console.log('Last played playlist URI:', lastPlayedPlaylistUri);
     
     // The user will need to click the play button to start playback
     setIsLoading(false);
     
     // keep track of the current playlist URI to use when the user clicks play
-  }, [deviceId, settings.currentSpotifyPlaylistUri, token, lastPlayedPlaylistUri]);
+  }, [deviceId, currentSpotifyPlaylistUri, token, lastPlayedPlaylistUri]);
 
   // Add a new useEffect to handle playlist changes
   useEffect(() => {
     // If we're already playing music and the playlist changes, switch to the new playlist
     // Only switch if the current playlist is different from the last played one
-    if (token && deviceId && settings.currentSpotifyPlaylistUri && isPlaying && 
-        settings.currentSpotifyPlaylistUri !== lastPlayedPlaylistUri) {
-      console.log('Switching to new playlist:', settings.currentSpotifyPlaylistUri);
+    if (token && deviceId && currentSpotifyPlaylistUri && isPlaying && 
+        currentSpotifyPlaylistUri !== lastPlayedPlaylistUri) {
+      console.log('Switching to new playlist:', currentSpotifyPlaylistUri);
       // This will switch to the new playlist while maintaining playback state
-      playPlaylist(settings.currentSpotifyPlaylistUri)
+      playPlaylist(currentSpotifyPlaylistUri)
         .catch(error => console.error('Error switching playlist:', error));
     }
-  }, [settings.currentSpotifyPlaylistUri, token, deviceId, isPlaying, playPlaylist, lastPlayedPlaylistUri]);
+  }, [currentSpotifyPlaylistUri, token, deviceId, isPlaying, playPlaylist, lastPlayedPlaylistUri]);
 
   // Function to play the current playlist (will be called by user interaction)
   const playCurrentPlaylist = async () => {
-    if (!token || !deviceId || !settings.currentSpotifyPlaylistUri) return;
+    if (!token || !deviceId || !currentSpotifyPlaylistUri) return;
     
     try {
       setIsLoading(true);
-      await playPlaylist(settings.currentSpotifyPlaylistUri);
+      await playPlaylist(currentSpotifyPlaylistUri);
       // Update playing state in both local state and MusicContext
       updatePlayingState(true);
     } catch (error) {

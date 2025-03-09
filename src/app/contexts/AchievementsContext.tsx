@@ -2,8 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
+import { useAuth } from './AuthContext';
+import { getUserAchievements, saveUserAchievements } from '../firebase/firestore';
 
-interface Achievement {
+export interface Achievement {
   id: string;
   title: string;
   description: string;
@@ -36,46 +38,78 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
   const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements);
   const [isClient, setIsClient] = useState(false);
   const unlockedAchievementRef = useRef<string | null>(null);
+  const { user } = useAuth();
 
   // Set isClient to true after initial render
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Load achievements from localStorage
+  // Load achievements from Firestore if user is logged in, otherwise from localStorage
   useEffect(() => {
     if (!isClient) return;
     
-    try {
-      const savedAchievements = localStorage.getItem('achievements');
-      if (savedAchievements) {
-        const parsedAchievements = JSON.parse(savedAchievements);
+    const loadAchievements = async () => {
+      try {
+        if (user) {
+          // Try to load from Firestore first
+          const firestoreAchievements = await getUserAchievements(user.uid);
+          
+          if (firestoreAchievements) {
+            // Ensure all default achievements exist (in case new ones were added)
+            const mergedAchievements = defaultAchievements.map(defaultAch => {
+              const savedAch = firestoreAchievements.find(a => a.id === defaultAch.id);
+              return savedAch || defaultAch;
+            });
+            
+            setAchievements(mergedAchievements);
+            return;
+          }
+        }
         
-        // Ensure all default achievements exist (in case new ones were added)
-        const mergedAchievements = defaultAchievements.map(defaultAch => {
-          const savedAch = parsedAchievements.find((a: Achievement) => a.id === defaultAch.id);
-          return savedAch || defaultAch;
-        });
-        
-        setAchievements(mergedAchievements);
+        // Fall back to localStorage if not logged in or no Firestore data
+        const savedAchievements = localStorage.getItem('achievements');
+        if (savedAchievements) {
+          const parsedAchievements = JSON.parse(savedAchievements);
+          
+          // Ensure all default achievements exist (in case new ones were added)
+          const mergedAchievements = defaultAchievements.map(defaultAch => {
+            const savedAch = parsedAchievements.find((a: Achievement) => a.id === defaultAch.id);
+            return savedAch || defaultAch;
+          });
+          
+          setAchievements(mergedAchievements);
+        }
+      } catch (error) {
+        console.error('Error loading achievements:', error);
+        // Fallback to default achievements if there's an error
+        setAchievements(defaultAchievements);
       }
-    } catch (error) {
-      console.error('Error loading achievements:', error);
-      // Fallback to default achievements if there's an error
-      setAchievements(defaultAchievements);
-    }
-  }, [isClient]);
+    };
+    
+    loadAchievements();
+  }, [isClient, user]);
 
-  // Save achievements to localStorage whenever they change
+  // Save achievements to Firestore if user is logged in, otherwise to localStorage
   useEffect(() => {
     if (!isClient) return;
     
-    try {
-      localStorage.setItem('achievements', JSON.stringify(achievements));
-    } catch (error) {
-      console.error('Error saving achievements:', error);
-    }
-  }, [achievements, isClient]);
+    const saveAchievements = async () => {
+      try {
+        if (user) {
+          // Save to Firestore if user is logged in
+          await saveUserAchievements(user.uid, achievements);
+        } else {
+          // Save to localStorage if not logged in
+          localStorage.setItem('achievements', JSON.stringify(achievements));
+        }
+      } catch (error) {
+        console.error('Error saving achievements:', error);
+      }
+    };
+    
+    saveAchievements();
+  }, [achievements, isClient, user]);
 
   // Handle toast notifications for unlocked achievements
   useEffect(() => {

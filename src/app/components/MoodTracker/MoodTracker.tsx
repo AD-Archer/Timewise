@@ -3,7 +3,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMood } from '../../contexts/MoodContext';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  TooltipProps
+} from 'recharts';
+import { 
+  ValueType, 
+  NameType 
+} from 'recharts/types/component/DefaultTooltipContent';
 import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X } from 'lucide-react';
 
 const MoodTracker = () => {
@@ -42,12 +55,13 @@ const MoodTracker = () => {
     const filteredEntries = getEntriesByDateRange(start, end);
     const avg = getAverageMood(start, end);
     
-    setAverageMood(avg);
+    // Convert average mood to new scale (5=good, 1=bad)
+    setAverageMood(avg !== null ? 6 - avg : null);
     
     // Prepare data for chart
     const data = filteredEntries.map(entry => ({
       date: format(new Date(entry.date), 'MM/dd'),
-      mood: entry.mood
+      mood: 6 - entry.mood // Convert mood value to new scale (5=good, 1=bad)
     }));
     
     setChartData(data);
@@ -82,7 +96,9 @@ const MoodTracker = () => {
     e.preventDefault();
     
     if (currentMood !== null) {
-      addEntry(currentMood, note, selectedTags);
+      // Convert mood back to original scale for storage (1=good, 5=bad)
+      const storageMood = 6 - currentMood;
+      addEntry(storageMood, note, selectedTags);
       setCurrentMood(null);
       setNote('');
       setSelectedTags([]);
@@ -92,13 +108,53 @@ const MoodTracker = () => {
   // Render mood icon based on mood value
   const renderMoodIcon = (mood: number, size = 24) => {
     switch (mood) {
-      case 5: return <Frown size={size} className="text-red-500" />;
-      case 4: return <AlertCircle size={size} className="text-orange-500" />;
+      case 1: return <Frown size={size} className="text-red-500" />;
+      case 2: return <AlertCircle size={size} className="text-orange-500" />;
       case 3: return <Meh size={size} className="text-yellow-500" />;
-      case 2: return <Smile size={size} className="text-green-500" />;
-      case 1: return <Heart size={size} className="text-pink-500" />;
+      case 4: return <Smile size={size} className="text-green-500" />;
+      case 5: return <Heart size={size} className="text-pink-500" />;
       default: return null;
     }
+  };
+
+  // Custom tick formatter for Y-axis to render emotion icons
+  type CustomYAxisTickProps = {
+    x: number;
+    y: number;
+    payload: {
+      value: number;
+    };
+  };
+
+  const CustomYAxisTick = ({ x, y, payload }: CustomYAxisTickProps) => {
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <foreignObject width="24" height="24" x="-28" y="-12">
+          {renderMoodIcon(payload.value)}
+        </foreignObject>
+      </g>
+    );
+  };
+
+  // Custom tooltip formatter to show emotion icon
+  const CustomTooltip = ({ 
+    active, 
+    payload, 
+    label 
+  }: TooltipProps<ValueType, NameType>) => {
+    if (active && payload && payload.length) {
+      const mood = payload[0].value as number;
+      return (
+        <div className="bg-black/80 p-2 rounded-md">
+          <p className="text-white text-sm">{`Date: ${label}`}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-white text-sm">Mood:</span>
+            {renderMoodIcon(mood)}
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -110,14 +166,14 @@ const MoodTracker = () => {
         <h2 className="text-xl text-white mb-4">How are you feeling today?</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Mood Scale - Reversed (Good on left, Bad on right) */}
+          {/* Mood Scale - 5=Good (left) to 1=Bad (right) */}
           <div className="flex flex-col space-y-2">
             <div className="flex justify-between text-white text-sm px-2">
               <span>Good</span>
               <span>Bad</span>
             </div>
             <div className="flex justify-between items-center">
-              {[1, 2, 3, 4, 5].map(mood => (
+              {[5, 4, 3, 2, 1].map(mood => (
                 <button
                   key={mood}
                   type="button"
@@ -277,18 +333,14 @@ const MoodTracker = () => {
                       stroke="rgba(255,255,255,0.5)"
                     />
                     <YAxis 
-                      domain={[1, 5]} 
-                      ticks={[1, 2, 3, 4, 5]} 
+                      domain={[5, 1]} 
+                      ticks={[5, 4, 3, 2, 1]} 
                       stroke="rgba(255,255,255,0.5)"
-                      reversed={true} // Reverse Y-axis to match new mood scale
+                      tick={CustomYAxisTick}
+                      label={{ value: 'Mood', angle: -90, position: 'insideLeft', style: { fill: 'rgba(255,255,255,0.5)' } }}
                     />
                     <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(0,0,0,0.8)', 
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'white'
-                      }} 
+                      content={CustomTooltip}
                     />
                     <Line 
                       type="monotone" 
@@ -314,7 +366,7 @@ const MoodTracker = () => {
                 {entries.slice().reverse().slice(0, 5).map(entry => (
                   <div key={entry.id} className="p-3 bg-white/10 rounded-lg flex items-start gap-3">
                     <div className="mt-1">
-                      {renderMoodIcon(entry.mood)}
+                      {renderMoodIcon(6 - entry.mood)}
                     </div>
                     <div className="flex-1">
                       <div className="text-white/70 text-sm">

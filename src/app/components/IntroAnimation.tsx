@@ -87,12 +87,12 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       return;
     }
 
-    // Set typing complete after animation duration
+    // Set typing complete after animation duration (reduced from 5000ms to 2000ms)
     const typingTimer = setTimeout(() => {
       setTypingComplete(true);
-    }, 5000);
+    }, 2000);
 
-    // Move to next step after message is shown
+    // Move to next step after message is shown (reduced from 9000ms to 4000ms)
     const timer = setTimeout(() => {
       if (currentStep < messages.length - 1) {
         setCurrentStep(currentStep + 1);
@@ -100,9 +100,9 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       } else {
         setTimeout(() => {
           onComplete();
-        }, 3000);
+        }, 1500); // Reduced from 3000ms to 1500ms
       }
-    }, 9000);
+    }, 4000);
 
     return () => {
       clearTimeout(timer);
@@ -238,12 +238,12 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
               ))}
             </div>
 
-            {/* Skip button */}
+            {/* Skip button - Made more prominent */}
             <button
               onClick={handleSkip}
-              className="absolute bottom-8 right-8 text-gray-400 hover:text-white text-sm transition-colors"
+              className="absolute bottom-8 right-8 text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
             >
-              Skip
+              Skip Intro
             </button>
           </div>
         </motion.div>
