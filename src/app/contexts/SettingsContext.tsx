@@ -6,6 +6,9 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 import { useAuth } from './AuthContext';
 import { getUserSettings, saveUserSettings } from '../firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { loadUserData, saveUserChatHistory } from '../services/userDataService';
 
 interface Durations {
   pomodoro: number;
@@ -76,6 +79,7 @@ interface SettingsContextType {
   addChatMessage: (message: ChatMessage) => void;
   clearChatHistory: () => void;
   exportChatHistory: () => void;
+  isLoadingChat: boolean;
 }
 
 // Default lofi study music playlist
@@ -131,6 +135,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   
   // In-memory state for chat history (not stored in Firestore)
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [isLoadingChat, setIsLoadingChat] = useState(true);
 
   // Set isClient to true after initial render
   useEffect(() => {
@@ -201,6 +206,52 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     loadSettings();
   }, [isClient, user]);
 
+  // Load chat history from localStorage or Firestore
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const loadChatHistory = async () => {
+      try {
+        setIsLoadingChat(true);
+        
+        // If user is logged in and chatExportEnabled is true, try to load from Firestore
+        if (user && settings.chatExportEnabled) {
+          console.log('Loading chat history from Firestore...');
+          const userData = await loadUserData(user.uid);
+          
+          if (userData && userData.chatHistory && Array.isArray(userData.chatHistory)) {
+            console.log(`Found ${userData.chatHistory.length} chat messages in Firestore`);
+            
+            // Convert to ChatMessage format
+            const loadedMessages = userData.chatHistory.map(msg => ({
+              role: msg.role || 'assistant',
+              content: msg.content || '',
+              timestamp: msg.timestamp || Date.now()
+            }));
+            
+            setChatHistory(loadedMessages);
+            setIsLoadingChat(false);
+            return;
+          } else {
+            console.log('No chat history found in Firestore');
+          }
+        }
+        
+        // Fall back to localStorage
+        const savedChatHistory = getLocalStorage<ChatMessage[]>('chatHistory', []);
+        setChatHistory(savedChatHistory);
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        // Fall back to empty chat history on error
+        setChatHistory([]);
+      } finally {
+        setIsLoadingChat(false);
+      }
+    };
+    
+    loadChatHistory();
+  }, [isClient, user, settings.chatExportEnabled]);
+
   // Save settings to Firestore if user is logged in, otherwise to localStorage
   useEffect(() => {
     if (!isClient) return;
@@ -229,6 +280,34 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setLocalStorage('spotifyPlaylists', spotifyPlaylists);
     setLocalStorage('currentSpotifyPlaylistUri', currentSpotifyPlaylistUri);
   }, [spotifyPlaylists, currentSpotifyPlaylistUri, isClient]);
+
+  // Save chat history to localStorage and Firestore when it changes
+  useEffect(() => {
+    if (!isClient) return;
+    
+    // Always save to localStorage
+    setLocalStorage('chatHistory', chatHistory);
+    
+    // If user is logged in and chatExportEnabled is true, also save to Firestore
+    if (user && settings.chatExportEnabled && chatHistory.length > 0) {
+      const saveToFirestore = async () => {
+        try {
+          console.log('Saving chat history to Firestore...');
+          await saveUserChatHistory(user.uid, chatHistory);
+          console.log(`Successfully saved ${chatHistory.length} chat messages to Firestore`);
+        } catch (error) {
+          console.error('Error saving chat history to Firestore:', error);
+        }
+      };
+      
+      // Debounce the save to avoid too many Firestore writes
+      const timeoutId = setTimeout(() => {
+        saveToFirestore();
+      }, 2000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [chatHistory, isClient, user, settings.chatExportEnabled]);
 
   // Handle pending updates
   useEffect(() => {
@@ -340,7 +419,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       chatHistory,
       addChatMessage,
       clearChatHistory,
-      exportChatHistory
+      exportChatHistory,
+      isLoadingChat
     }}>
       {children}
     </SettingsContext.Provider>

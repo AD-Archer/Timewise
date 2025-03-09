@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
+import { useAuth } from './AuthContext';
+import { useSettings } from './SettingsContext';
+import { saveUserAnalytics, loadUserData } from '../services/userDataService';
 
 interface DailyStats {
   date: string;
@@ -20,6 +23,7 @@ interface Analytics {
 
 interface AnalyticsContextType {
   analytics: Analytics;
+  isLoading: boolean;
   recordPomodoroComplete: (focusTime: number) => void;
   recordBreakComplete: () => void;
   resetAnalytics: () => void;
@@ -37,6 +41,7 @@ const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefin
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [analytics, setAnalytics] = useState<Analytics>({
     totalPomodoros: 0,
     totalFocusTime: 0,
@@ -44,29 +49,80 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
     longestStreak: 0,
     dailyStats: []
   });
+  const { user } = useAuth();
+  const { settings } = useSettings();
 
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
     setIsClient(true);
+  }, []);
+  
+  // Load analytics from localStorage or Firestore
+  useEffect(() => {
+    if (!isClient) return;
     
-    // Load analytics from localStorage
-    const defaultAnalytics: Analytics = {
-      totalPomodoros: 0,
-      totalFocusTime: 0,
-      currentStreak: 0,
-      longestStreak: 0,
-      dailyStats: []
+    const loadAnalytics = async () => {
+      try {
+        setIsLoading(true);
+        
+        // If user is logged in and we're not storing data locally, try to load from Firestore
+        if (user && settings && settings.storeMoodDataLocally === false) {
+          console.log('Loading analytics data from Firestore...');
+          const userData = await loadUserData(user.uid);
+          
+          if (userData && userData.analytics) {
+            console.log('Found analytics data in Firestore');
+            setAnalytics(userData.analytics);
+            setIsLoading(false);
+            return;
+          } else {
+            console.log('No analytics data found in Firestore');
+          }
+        }
+        
+        // Fall back to localStorage
+        const savedAnalytics = getLocalStorage('analytics', defaultAnalytics);
+        setAnalytics(savedAnalytics);
+      } catch (error) {
+        console.error('Error loading analytics:', error);
+        // Fall back to localStorage on error
+        const savedAnalytics = getLocalStorage('analytics', defaultAnalytics);
+        setAnalytics(savedAnalytics);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
-    const savedAnalytics = getLocalStorage('analytics', defaultAnalytics);
-    setAnalytics(savedAnalytics);
-  }, []);
+    loadAnalytics();
+  }, [isClient, user, settings]);
 
+  // Save analytics to localStorage and Firestore when they change
   useEffect(() => {
-    if (isClient) {
-      setLocalStorage('analytics', analytics);
+    if (!isClient) return;
+    
+    // Always save to localStorage
+    setLocalStorage('analytics', analytics);
+    
+    // If user is logged in and we're not storing data locally, also save to Firestore
+    if (user && settings && settings.storeMoodDataLocally === false) {
+      const saveToFirestore = async () => {
+        try {
+          console.log('Saving analytics data to Firestore...');
+          await saveUserAnalytics(user.uid, analytics);
+          console.log('Analytics data saved to Firestore');
+        } catch (error) {
+          console.error('Error saving analytics to Firestore:', error);
+        }
+      };
+      
+      // Debounce the save to avoid too many Firestore writes
+      const timeoutId = setTimeout(() => {
+        saveToFirestore();
+      }, 1000);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [analytics, isClient]);
+  }, [analytics, isClient, user, settings]);
 
   const getTodayKey = () => {
     if (!isClient) return ''; // Return empty string on server-side
@@ -126,6 +182,7 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   return (
     <AnalyticsContext.Provider value={{ 
       analytics, 
+      isLoading,
       recordPomodoroComplete, 
       recordBreakComplete,
       resetAnalytics 

@@ -2,16 +2,28 @@
 
 import React from 'react';
 import { useAchievements } from '../../contexts/AchievementsContext';
-import { Award, Lock } from 'lucide-react';
+import { Award, Lock, Loader2 } from 'lucide-react';
 
 const Achievements = () => {
-  const { achievements } = useAchievements();
+  const { achievements, isLoading } = useAchievements();
   
   // Count unlocked achievements
   const unlockedCount = achievements.filter(a => a.unlocked).length; // this is the number of achievements unlocked
   const totalCount = achievements.length; // this is the total number of achievements
   const progressPercentage = totalCount > 0 ? (unlockedCount / totalCount) * 100 : 0; // this is the progress bar
   const formattedProgressPercentage = `${progressPercentage.toFixed(0)}%`; // this makes it look like a progress bar
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 flex justify-center items-center">
+          <Loader2 className="animate-spin text-white mr-2" size={24} />
+          <span className="text-white">Loading your achievements...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -49,8 +61,8 @@ const Achievements = () => {
             key={achievement.id}
             className={`p-4 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all ${
               achievement.unlocked 
-                ? 'bg-green-500/20 border border-green-500/50' 
-                : 'bg-white/5 opacity-70'
+                ? 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30' 
+                : 'bg-white/5'
             }`}
           >
             <div>

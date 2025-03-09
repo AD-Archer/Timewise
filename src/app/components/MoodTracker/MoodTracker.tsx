@@ -17,10 +17,10 @@ import {
   ValueType, 
   NameType 
 } from 'recharts/types/component/DefaultTooltipContent';
-import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X } from 'lucide-react';
+import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X, Loader2 } from 'lucide-react';
 
 const MoodTracker = () => {
-  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood } = useMood();
+  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood, isLoading } = useMood();
   const [currentMood, setCurrentMood] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -160,6 +160,13 @@ const MoodTracker = () => {
   return (
     <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl w-full max-w-4xl">
       <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">Mood Tracker</h1>
+      
+      {isLoading && (
+        <div className="flex justify-center items-center mb-4">
+          <Loader2 className="animate-spin text-white mr-2" size={24} />
+          <span className="text-white">Loading your mood data...</span>
+        </div>
+      )}
       
       {/* Mood Input Section */}
       <div className="mb-8">

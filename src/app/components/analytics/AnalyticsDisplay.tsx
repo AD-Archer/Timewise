@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
-import { Clock, Target, Flame, Award } from 'lucide-react';
+import { Clock, Target, Flame, Award, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
 
@@ -17,10 +17,10 @@ interface ChartDataPoint {
 }
 
 const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
-  const { analytics } = useAnalytics();
+  const { analytics, isLoading: isAnalyticsLoading } = useAnalytics();
   const [timeframe, setTimeframe] = useState<'week' | 'month'>('week');
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isChartLoading, setIsChartLoading] = useState(true);
 
   const formatTime = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
@@ -30,7 +30,7 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
 
   // Prepare chart data based on timeframe
   useEffect(() => {
-    setIsLoading(true);
+    setIsChartLoading(true);
     
     // Small timeout to ensure UI remains responsive
     const timer = setTimeout(() => {
@@ -49,21 +49,33 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
         return {
           date: format(parseISO(date), 'MM/dd'),
           pomodoros: dayStat ? dayStat.completedPomodoros : 0,
-          focusTime: dayStat ? Math.round(dayStat.totalFocusTime / 60) : 0, // Convert to minutes
+          focusTime: dayStat ? Math.round(dayStat.totalFocusTime / 60) : 0, // Convert to hours for better visualization
         };
       });
       
       setChartData(data);
-      setIsLoading(false);
+      setIsChartLoading(false);
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [analytics.dailyStats, timeframe]);
+  }, [timeframe, analytics.dailyStats]);
+
+  // Show loading state
+  if (isAnalyticsLoading) {
+    return (
+      <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl w-full max-w-4xl">
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="animate-spin text-white mr-2" size={24} />
+          <span className="text-white">Loading your analytics data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Loading overlay */}
-      {isLoading && (
+      {isChartLoading && (
         <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
           <div className="animate-pulse text-white">Loading analytics...</div>
         </div>
