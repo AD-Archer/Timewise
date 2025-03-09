@@ -8,6 +8,7 @@ import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award } from 'lucide-react';
 import Achievements from '../analytics/Achievements'; 
+import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
 
 interface SettingsProps {
   currentTab: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
@@ -541,6 +542,16 @@ const Settings = ({ currentTab }: SettingsProps) => {
             <Award className="text-pink-500 mb-2" size={24} />
             <div className="text-2xl font-bold text-white">{analytics.longestStreak}</div>
             <div className="text-xs text-white/70">Longest Streak</div>
+          </div>
+        </div>
+        
+        {/* Timer Data Charts */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Timer Activity</h3>
+          
+          {/* Import the AnalyticsDisplay component to show the charts */}
+          <div className="bg-transparent">
+            <AnalyticsDisplay showCards={false} />
           </div>
         </div>
       </div>

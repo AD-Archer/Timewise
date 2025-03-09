@@ -1,3 +1,5 @@
+//I'm debating on having muliple settings panels, maybe 1 for the timer and 1 for the mood app.
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';

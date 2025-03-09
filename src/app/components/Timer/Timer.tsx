@@ -140,6 +140,16 @@ const Timer = () => {
           setIsRunning(true);
         }
       }
+    } else if (currentMode === 'longBreak') {
+      breakEndSound.play();
+      recordBreakComplete();
+      // Reset pomodoro count after completing the long break
+      updateSettings({ pomodoroCount: 0 });
+      setCurrentMode('pomodoro');
+      if (settings.autoStartPomodoros) {
+        setTimeLeft(settings.durations.pomodoro);
+        setIsRunning(true);
+      }
     } else {
       breakEndSound.play();
       recordBreakComplete();
@@ -182,17 +192,6 @@ const Timer = () => {
     }
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, handleTimerComplete]);
-
-  // Use useEffect to check if pomodoroCount exceeds targetPomodoros
-  useEffect(() => {
-    if (settings.pomodoroCount >= settings.targetPomodoros) {
-      // Use setTimeout to avoid state updates during render
-      const timer = setTimeout(() => {
-        updateSettings({ pomodoroCount: 0 });
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [settings.pomodoroCount, settings.targetPomodoros, updateSettings]);
 
   const resetTimer = () => {
     setTimeLeft(settings.durations[currentMode]);

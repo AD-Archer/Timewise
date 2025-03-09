@@ -50,9 +50,9 @@ const Clock = () => {
   });
   
   return (
-    <div className="flex flex-col items-center justify-center p-4 bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg">
-      <div className="text-3xl font-semibold mb-1">{formattedTime}</div>
-      <div className="text-sm opacity-80">{formattedDate}</div>
+    <div className="flex flex-col items-center justify-center p-3 md:p-4 bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg">
+      <div className="text-2xl md:text-3xl font-semibold mb-0 md:mb-1">{formattedTime}</div>
+      <div className="text-xs md:text-sm opacity-80">{formattedDate}</div>
     </div>
   );
 };
