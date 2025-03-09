@@ -11,7 +11,7 @@ import Achievements from '../analytics/Achievements';
 import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
 
 interface SettingsProps {
-  currentTab: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
+  currentTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
@@ -123,6 +123,86 @@ const Settings = ({ currentTab }: SettingsProps) => {
     const mins = minutes % 60;
     return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
   };
+
+  if (currentTab === 'mood') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Mood Tracker Settings</h3>
+        </div>
+        
+        {/* Mood Tracking Frequency */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Tracking Frequency</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Prompt for mood:</label>
+            <select
+              value={settings.moodTrackingFrequency || 'endOfSession'}
+              onChange={(e) => updateSettings({ moodTrackingFrequency: e.target.value as 'endOfSession' | 'endOfPomodoro' | 'daily' | 'manual' })}
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            >
+              <option value="endOfSession">At the end of each session</option>
+              <option value="endOfPomodoro">After each pomodoro</option>
+              <option value="daily">Once daily</option>
+              <option value="manual">Only when manually triggered</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Mood Tracking Options */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Tracking Options</h4>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Enable mood tracking:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.moodTrackingEnabled !== false}
+              onChange={(e) => updateSettings({ moodTrackingEnabled: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Track productivity correlation:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.trackProductivityWithMood !== false}
+              onChange={(e) => updateSettings({ trackProductivityWithMood: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Show mood history:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.showMoodHistory !== false}
+              onChange={(e) => updateSettings({ showMoodHistory: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+        </div>
+        
+        {/* Data Privacy */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Data Privacy</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Store mood data locally only:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.storeMoodDataLocally !== false}
+              onChange={(e) => updateSettings({ storeMoodDataLocally: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          <p className="text-xs text-white/50 mt-1">
+            When enabled, your mood data will only be stored on this device and won&apos;t be synced to the cloud.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (currentTab === 'timer') {
     return (
@@ -239,6 +319,117 @@ const Settings = ({ currentTab }: SettingsProps) => {
         >
           Apply
         </button>
+      </div>
+    );
+  }
+
+  if (currentTab === 'chatbot') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Chatbot Settings</h3>
+        </div>
+        
+        {/* Chatbot Enablement */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Chatbot Features</h4>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Enable chatbot assistant:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.chatbotEnabled !== false}
+              onChange={(e) => updateSettings({ chatbotEnabled: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Proactive suggestions:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.chatbotProactiveSuggestions !== false}
+              onChange={(e) => updateSettings({ chatbotProactiveSuggestions: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          
+          <p className="text-xs text-white/50 mt-1">
+            When enabled, the chatbot will occasionally offer productivity tips and suggestions.
+          </p>
+        </div>
+        
+        {/* Chatbot Personality */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Chatbot Personality</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Personality style:</label>
+            <select
+              value={settings.chatbotPersonality || 'supportive'}
+              onChange={(e) => updateSettings({ chatbotPersonality: e.target.value as 'supportive' | 'direct' | 'humorous' | 'analytical' })}
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            >
+              <option value="supportive">Supportive & Encouraging</option>
+              <option value="direct">Direct & Efficient</option>
+              <option value="humorous">Humorous & Light</option>
+              <option value="analytical">Analytical & Detailed</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* API Settings */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">API Settings</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Model:</label>
+            <select
+              value={settings.chatbotModel || 'gpt-3.5-turbo'}
+              onChange={(e) => updateSettings({ chatbotModel: e.target.value as 'gpt-3.5-turbo' | 'gpt-4' })}
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            >
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster)</option>
+              <option value="gpt-4">GPT-4 (More Capable)</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <label className="text-white/80 text-xs">Custom API Key (optional):</label>
+            <input 
+              type="password" 
+              value={settings.customOpenAIKey || ''}
+              onChange={(e) => updateSettings({ customOpenAIKey: e.target.value })}
+              placeholder="sk-..."
+              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+            />
+          </div>
+          <p className="text-xs text-white/50 mt-1">
+            If provided, your own API key will be used instead of the shared one. Your key is stored locally and never sent to our servers.
+          </p>
+        </div>
+        
+        {/* Data Privacy */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Privacy Settings</h4>
+          <div className="flex items-center gap-2">
+            <label className="text-white/80 text-xs">Save chat history:</label>
+            <input 
+              type="checkbox" 
+              checked={settings.saveChatHistory !== false}
+              onChange={(e) => updateSettings({ saveChatHistory: e.target.checked })} 
+              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+            />
+          </div>
+          <button 
+            onClick={() => {
+              if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                updateSettings({ chatHistory: [] });
+              }
+            }}
+            className="mt-2 px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            Clear Chat History
+          </button>
+        </div>
       </div>
     );
   }

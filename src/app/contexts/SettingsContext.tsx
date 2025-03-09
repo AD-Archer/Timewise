@@ -40,6 +40,24 @@ interface Settings {
   preferredMusicService: 'youtube' | 'spotify';
   soundEnabled: boolean;
   soundVolume: number;
+  // Mood tracker settings
+  moodTrackingEnabled?: boolean;
+  moodTrackingFrequency?: 'endOfSession' | 'endOfPomodoro' | 'daily' | 'manual';
+  trackProductivityWithMood?: boolean;
+  showMoodHistory?: boolean;
+  storeMoodDataLocally?: boolean;
+  // Chatbot settings
+  chatbotEnabled?: boolean;
+  chatbotProactiveSuggestions?: boolean;
+  chatbotPersonality?: 'supportive' | 'direct' | 'humorous' | 'analytical';
+  chatbotModel?: 'gpt-3.5-turbo' | 'gpt-4';
+  customOpenAIKey?: string;
+  saveChatHistory?: boolean;
+  chatHistory?: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    timestamp?: number;
+  }>;
 }
 
 interface SettingsContextType {
@@ -74,6 +92,20 @@ const defaultSettings: Settings = {
   preferredMusicService: 'spotify',
   soundEnabled: true,
   soundVolume: 0.5,
+  // Default mood tracker settings
+  moodTrackingEnabled: true,
+  moodTrackingFrequency: 'endOfSession',
+  trackProductivityWithMood: true,
+  showMoodHistory: true,
+  storeMoodDataLocally: false,
+  // Default chatbot settings
+  chatbotEnabled: true,
+  chatbotProactiveSuggestions: true,
+  chatbotPersonality: 'supportive',
+  chatbotModel: 'gpt-3.5-turbo',
+  customOpenAIKey: '',
+  saveChatHistory: true,
+  chatHistory: [],
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

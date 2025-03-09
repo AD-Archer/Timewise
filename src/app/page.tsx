@@ -15,12 +15,13 @@ import { MusicProvider } from './contexts/MusicContext';
 import Clock from "./components/Clock";
 import IntroAnimation from "./components/IntroAnimation";
 import TimerPresets from "./components/Timer/TimerPresets";
+import ChatBot from "./components/ChatBot/ChatBot";
 
 export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements'>('timer');
-  const [activeTab, setActiveTab] = useState<'mood' | 'timer'>('mood');
+  const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat'>('mood');
   const [showIntro, setShowIntro] = useState(true);
   const [introReady, setIntroReady] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -77,7 +78,7 @@ export default function Home() {
     localStorage.setItem('hasSeenIntro', 'true');
   }, []);
 
-  const handleTabChange = useCallback((tab: 'mood' | 'timer') => {
+  const handleTabChange = useCallback((tab: 'mood' | 'timer' | 'chat') => {
     setActiveTab(tab);
   }, []);
 
@@ -129,16 +130,20 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="w-full max-w-7xl mx-auto flex flex-col items-center justify-center flex-grow px-4 pt-12 md:pt-8 pb-8 relative z-10">
-              <div className={`w-full max-w-2xl transition-all duration-300 ${activeTab === 'mood' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full absolute pointer-events-none'}`}>
+            <div className="w-full max-w-7xl mx-auto flex flex-col items-center justify-start flex-grow px-4 pt-12 md:pt-8 pb-24 relative z-10">
+              <div className={`w-full max-w-2xl transition-all duration-300 ${activeTab === 'mood' ? 'opacity-100 translate-x-0 z-10' : 'opacity-0 translate-x-full absolute pointer-events-none z-0'}`}>
                 <MoodTracker />
               </div>
               
-              <div className={`w-full max-w-2xl transition-all duration-300 ${activeTab === 'timer' ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full absolute pointer-events-none'}`}>
+              <div className={`w-full max-w-2xl transition-all duration-300 ${activeTab === 'timer' ? 'opacity-100 translate-x-0 z-10' : 'opacity-0 -translate-x-full absolute pointer-events-none z-0'}`}>
                 <Timer />
                 <div className="mt-6">
                   <TimerPresets />
                 </div>
+              </div>
+
+              <div className={`w-full max-w-2xl transition-all duration-300 ${activeTab === 'chat' ? 'opacity-100 translate-y-0 z-10' : 'opacity-0 translate-y-full absolute pointer-events-none z-0'}`}>
+                <ChatBot />
               </div>
             </div>
             

@@ -9,10 +9,10 @@ import { useAnalytics } from '../../contexts/AnalyticsContext';
 interface SettingsPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
+  initialTab?: 'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot';
 }
 
-type SettingsTab = 'timer' | 'background' | 'music' | 'analytics' | 'achievements';
+type SettingsTab = 'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot';
 
 const SettingsPopup = ({ isOpen, onClose, initialTab = 'timer' }: SettingsPopupProps) => {
   const [currentTab, setCurrentTab] = useState<SettingsTab>(initialTab);
@@ -30,11 +30,13 @@ const SettingsPopup = ({ isOpen, onClose, initialTab = 'timer' }: SettingsPopupP
   if (!isOpen) return null;
 
   const tabs = [
+    { id: 'mood', label: 'Mood', icon: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> },
     { id: 'timer', label: 'Timer', icon: Clock },
+    { id: 'chatbot', label: 'Chatbot', icon: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg> },
     { id: 'background', label: 'Background', icon: Image },
     { id: 'music', label: 'Music', icon: Music },
     { id: 'analytics', label: 'Stats', icon: Target },
-    { id: 'achievements', label: 'Achievements', icon: Award }, 
+    { id: 'achievements', label: 'Achievements', icon: Award },
   ] as const;
 
   const handleResetAll = () => {
