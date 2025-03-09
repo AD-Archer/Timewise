@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, ArrowDown, Lock } from 'lucide-react';
+import { Send, Bot, User, ArrowDown, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 
@@ -13,7 +13,7 @@ interface Message {
 
 const ChatBot: React.FC = () => {
   const { user } = useAuth();
-  const { settings, chatHistory, addChatMessage } = useSettings();
+  const { settings, chatHistory, addChatMessage, isLoadingChat } = useSettings();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -45,6 +45,7 @@ const ChatBot: React.FC = () => {
   // Load chat history if available
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0 && user) {
+      console.log(`Loading ${chatHistory.length} messages from chat history`);
       const loadedMessages = chatHistory.map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
@@ -198,118 +199,122 @@ const ChatBot: React.FC = () => {
   }
 
   return (
-    <div className="w-full flex flex-col bg-black/30 backdrop-blur-md rounded-xl overflow-hidden shadow-lg border border-white/10 h-[700px]">
-      {/* Header - Fixed height */}
-      <div className="h-[60px] flex-none p-3 bg-pink-600/80 text-white">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Bot size={18} />
-          Mood Assistant
-        </h2>
-        <p className="text-xs text-white/70">Talk to me about how you&apos;re feeling today</p>
-      </div>
+    <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl w-full max-w-4xl h-full flex flex-col">
+      <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">AI Assistant</h1>
       
-      {/* Messages Container - Takes remaining space with scrolling */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-3 space-y-3 relative"
-        onScroll={handleScroll}
-      >
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            <div
-              className={`max-w-[80%] p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-pink-600 text-white rounded-tr-none'
-                  : 'bg-white/10 text-white rounded-tl-none'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                {message.role === 'assistant' ? (
-                  <Bot size={16} className="text-pink-300" />
-                ) : (
-                  <User size={16} className="text-white" />
-                )}
-                <span className="text-xs opacity-70">
-                  {message.timestamp.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-              <p className="whitespace-pre-wrap">{message.content}</p>
-            </div>
+      {isLoadingChat ? (
+        <div className="flex-grow flex justify-center items-center">
+          <div className="flex flex-col items-center">
+            <Loader2 className="animate-spin text-white mb-4" size={32} />
+            <p className="text-white">Loading your conversation history...</p>
           </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] p-3 rounded-lg bg-white/10 text-white rounded-tl-none">
-              <div className="flex items-center gap-2">
-                <Bot size={16} className="text-pink-300" />
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+        </div>
+      ) : (
+        <>
+          {/* Messages container */}
+          <div 
+            className="flex-grow overflow-y-auto mb-4 pr-2 custom-scrollbar"
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+          >
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`max-w-[80%] p-3 rounded-lg ${
+                    message.role === 'user'
+                      ? 'bg-pink-600 text-white rounded-tr-none'
+                      : 'bg-white/10 text-white rounded-tl-none'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {message.role === 'assistant' ? (
+                      <Bot size={16} className="text-pink-300" />
+                    ) : (
+                      <User size={16} className="text-white" />
+                    )}
+                    <span className="text-xs opacity-70">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <p className="whitespace-pre-wrap">{message.content}</p>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-        
-        {authError && (
-          <div className="flex justify-center">
-            <div className="max-w-[80%] p-3 rounded-lg bg-red-900/50 text-white border border-red-700">
-              <div className="flex items-center gap-2 mb-1">
-                <Lock size={16} className="text-red-300" />
-                <span className="text-xs opacity-70">Authentication Error</span>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] p-3 rounded-lg bg-white/10 text-white rounded-tl-none">
+                  <div className="flex items-center gap-2">
+                    <Bot size={16} className="text-pink-300" />
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-pink-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="whitespace-pre-wrap">{authError}</p>
+            )}
+            
+            {authError && (
+              <div className="flex justify-center">
+                <div className="max-w-[80%] p-3 rounded-lg bg-red-900/50 text-white border border-red-700">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Lock size={16} className="text-red-300" />
+                    <span className="text-xs opacity-70">Authentication Error</span>
+                  </div>
+                  <p className="whitespace-pre-wrap">{authError}</p>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+            
+            {/* Scroll to bottom button */}
+            {showScrollButton && (
+              <button
+                onClick={scrollToBottom}
+                className="absolute bottom-2 right-2 p-2 rounded-full bg-pink-600 text-white shadow-lg hover:bg-pink-700 transition-colors"
+                aria-label="Scroll to bottom"
+              >
+                <ArrowDown size={18} />
+              </button>
+            )}
+          </div>
+          
+          {/* Input Area - Fixed height at bottom */}
+          <div className="h-[50px] flex-none p-2 border-t border-white/10 bg-black/20">
+            <div className="flex items-center gap-2 h-full">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                className="flex-1 bg-white/10 text-white rounded-lg p-2 outline-none resize-none h-full"
+                disabled={isLoading}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isLoading || !input.trim()}
+                className={`flex-none p-2 rounded-full ${
+                  isLoading || !input.trim()
+                    ? 'bg-pink-600/50 cursor-not-allowed'
+                    : 'bg-pink-600 hover:bg-pink-700'
+                } text-white transition-colors`}
+              >
+                <Send size={18} />
+              </button>
             </div>
           </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-        
-        {/* Scroll to bottom button */}
-        {showScrollButton && (
-          <button
-            onClick={scrollToBottom}
-            className="absolute bottom-2 right-2 p-2 rounded-full bg-pink-600 text-white shadow-lg hover:bg-pink-700 transition-colors"
-            aria-label="Scroll to bottom"
-          >
-            <ArrowDown size={18} />
-          </button>
-        )}
-      </div>
-      
-      {/* Input Area - Fixed height at bottom */}
-      <div className="h-[50px] flex-none p-2 border-t border-white/10 bg-black/20">
-        <div className="flex items-center gap-2 h-full">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            className="flex-1 bg-white/10 text-white rounded-lg p-2 outline-none resize-none h-full"
-            disabled={isLoading}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || !input.trim()}
-            className={`flex-none p-2 rounded-full ${
-              isLoading || !input.trim()
-                ? 'bg-pink-600/50 cursor-not-allowed'
-                : 'bg-pink-600 hover:bg-pink-700'
-            } text-white transition-colors`}
-          >
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

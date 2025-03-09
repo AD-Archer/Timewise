@@ -74,8 +74,20 @@ export default function Home() {
           
           // Load mood data if it exists and storeMoodDataLocally is false
           if (userData && userData.moodData && userData.settings && userData.settings.storeMoodDataLocally === false) {
+            console.log('Found mood data in Firestore, attempting to load:', userData.moodData);
             // Convert Firestore mood data format to MoodContext format
             if (userData.moodData.entries && Array.isArray(userData.moodData.entries)) {
+              console.log(`Processing ${userData.moodData.entries.length} mood entries from Firestore`);
+              
+              // Create a map of existing entries by timestamp for faster lookup
+              const existingEntriesMap = new Map();
+              entries.forEach(entry => {
+                existingEntriesMap.set(new Date(entry.date).getTime(), true);
+              });
+              
+              let addedCount = 0;
+              let skippedCount = 0;
+              
               userData.moodData.entries.forEach(entry => {
                 try {
                   if (!entry || typeof entry !== 'object') {
@@ -90,19 +102,23 @@ export default function Home() {
                     return;
                   }
                   
-                  const existingEntry = entries.find(e => new Date(e.date).getTime() === timestamp);
-                  
-                  if (!existingEntry) {
+                  // Use the map for faster lookup
+                  if (!existingEntriesMap.has(timestamp)) {
                     addEntry(
                       entry.mood || 3, // Default to neutral mood if missing
                       entry.notes || '',
                       entry.tags || [] // Use tags from Firestore if available
                     );
+                    addedCount++;
+                  } else {
+                    skippedCount++;
                   }
                 } catch (entryError) {
                   console.error('Error processing mood entry:', entryError, entry);
                 }
               });
+              
+              console.log(`Mood data loading complete. Added ${addedCount} new entries, skipped ${skippedCount} existing entries.`);
             } else {
               console.log('No mood entries found or entries is not an array:', userData.moodData);
             }

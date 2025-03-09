@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useMood } from '../../contexts/MoodContext';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { useSettings } from '../../contexts/SettingsContext';
+import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from 'date-fns';
 import { 
   LineChart, 
   Line, 
@@ -17,16 +18,17 @@ import {
   ValueType, 
   NameType 
 } from 'recharts/types/component/DefaultTooltipContent';
-import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X } from 'lucide-react';
+import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X, Loader2 } from 'lucide-react';
 
 const MoodTracker = () => {
-  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood } = useMood();
+  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood, isLoading } = useMood();
+  const { settings, updateSettings } = useSettings();
   const [currentMood, setCurrentMood] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [showAddTag, setShowAddTag] = useState(false);
-  const [timeframe, setTimeframe] = useState<'week' | 'month'>('week');
+  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(settings.moodChartTimeframe || 'week');
   const [averageMood, setAverageMood] = useState<number | null>(null);
   
   interface ChartDataPoint {
@@ -39,9 +41,15 @@ const MoodTracker = () => {
   // Calculate date ranges based on timeframe
   const getDateRange = useCallback(() => {
     const endDate = new Date();
-    const startDate = timeframe === 'week' 
-      ? subDays(endDate, 7) 
-      : subDays(endDate, 30);
+    let startDate;
+    
+    if (timeframe === 'week') {
+      startDate = subDays(endDate, 7);
+    } else if (timeframe === 'month') {
+      startDate = subMonths(endDate, 1);
+    } else { // year
+      startDate = subYears(endDate, 1);
+    }
     
     return {
       start: startOfDay(startDate).toISOString(),
@@ -65,7 +73,17 @@ const MoodTracker = () => {
     }));
     
     setChartData(data);
-  }, [entries, getEntriesByDateRange, getAverageMood, getDateRange]);
+  }, [getDateRange, getEntriesByDateRange, getAverageMood, entries]);
+
+  // Update settings when timeframe changes, but use a ref to prevent unnecessary updates
+  const prevTimeframeRef = useRef(timeframe);
+  useEffect(() => {
+    // Only update settings if timeframe actually changed
+    if (prevTimeframeRef.current !== timeframe) {
+      updateSettings({ moodChartTimeframe: timeframe });
+      prevTimeframeRef.current = timeframe;
+    }
+  }, [timeframe, updateSettings]);
 
   // Handle mood selection
   const handleMoodSelect = (mood: number) => {
@@ -160,6 +178,13 @@ const MoodTracker = () => {
   return (
     <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl w-full max-w-4xl">
       <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">Mood Tracker</h1>
+      
+      {isLoading && (
+        <div className="flex justify-center items-center mb-4">
+          <Loader2 className="animate-spin text-white mr-2" size={24} />
+          <span className="text-white">Loading your mood data...</span>
+        </div>
+      )}
       
       {/* Mood Input Section */}
       <div className="mb-8">
@@ -281,27 +306,40 @@ const MoodTracker = () => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl text-white">Your Mood History</h2>
           
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTimeframe('week')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                timeframe === 'week' 
-                  ? 'bg-pink-600 text-white' 
-                  : 'bg-white/20 text-white/80 hover:bg-white/30'
-              }`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setTimeframe('month')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                timeframe === 'month' 
-                  ? 'bg-pink-600 text-white' 
-                  : 'bg-white/20 text-white/80 hover:bg-white/30'
-              }`}
-            >
-              Month
-            </button>
+          {/* Timeframe Selector */}
+          <div className="flex justify-end mb-4">
+            <div className="flex bg-white/10 rounded-full p-1">
+              <button
+                onClick={() => setTimeframe('week')}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  timeframe === 'week' 
+                    ? 'bg-pink-600 text-white' 
+                    : 'bg-white/20 text-white/80 hover:bg-white/30'
+                }`}
+              >
+                Week
+              </button>
+              <button
+                onClick={() => setTimeframe('month')}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  timeframe === 'month' 
+                    ? 'bg-pink-600 text-white' 
+                    : 'bg-white/20 text-white/80 hover:bg-white/30'
+                }`}
+              >
+                Month
+              </button>
+              <button
+                onClick={() => setTimeframe('year')}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  timeframe === 'year' 
+                    ? 'bg-pink-600 text-white' 
+                    : 'bg-white/20 text-white/80 hover:bg-white/30'
+                }`}
+              >
+                Year
+              </button>
+            </div>
           </div>
         </div>
         

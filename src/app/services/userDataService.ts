@@ -81,6 +81,12 @@ interface MoodEntry {
   tags?: string[];
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: number;
+}
+
 interface UserMoodData {
   entries: MoodEntry[];
 }
@@ -89,6 +95,7 @@ interface UserData {
   settings?: UserSettings;
   analytics?: UserAnalytics;
   moodData?: UserMoodData;
+  chatHistory?: ChatMessage[];
 }
 
 // Save user data to Firestore
@@ -155,15 +162,61 @@ export const saveUserMoodData = async (userId: string, moodData: UserMoodData): 
   try {
     const userDocRef = doc(db, 'users', userId);
     
-    // Force complete overwrite of the moodData field
-    await updateDoc(userDocRef, { 
-      moodData: moodData,
-      updatedAt: new Date()
-    });
+    // First check if the document exists
+    const userDoc = await getDoc(userDocRef);
     
-    console.log('Mood data saved to Firestore with complete overwrite');
+    if (userDoc.exists()) {
+      // Force complete overwrite of the moodData field
+      await updateDoc(userDocRef, { 
+        moodData: moodData,
+        updatedAt: new Date()
+      });
+      
+      console.log(`Mood data saved to Firestore: ${moodData.entries.length} entries`);
+    } else {
+      // Create a new document if it doesn't exist
+      await setDoc(userDocRef, {
+        moodData: moodData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      console.log(`Created new user document with ${moodData.entries.length} mood entries`);
+    }
   } catch (error) {
     console.error('Error saving mood data to Firestore:', error);
+    throw error;
+  }
+};
+
+// Save chat history to Firestore
+export const saveUserChatHistory = async (userId: string, chatHistory: ChatMessage[]): Promise<void> => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    
+    // First check if the document exists
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      // Force complete overwrite of the chatHistory field
+      await updateDoc(userDocRef, { 
+        chatHistory: chatHistory,
+        updatedAt: new Date()
+      });
+      
+      console.log(`Chat history saved to Firestore: ${chatHistory.length} messages`);
+    } else {
+      // Create a new document if it doesn't exist
+      await setDoc(userDocRef, {
+        chatHistory: chatHistory,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      console.log(`Created new user document with ${chatHistory.length} chat messages`);
+    }
+  } catch (error) {
+    console.error('Error saving chat history to Firestore:', error);
     throw error;
   }
 };

@@ -14,6 +14,7 @@ export interface Achievement {
 
 interface AchievementsContextType {
   achievements: Achievement[];
+  isLoading: boolean;
   unlockAchievement: (id: string) => void;
   resetAchievements: () => void;
 }
@@ -37,6 +38,7 @@ const AchievementsContext = createContext<AchievementsContextType | undefined>(u
 export function AchievementsProvider({ children }: { children: React.ReactNode }) {
   const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements);
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const unlockedAchievementRef = useRef<string | null>(null);
   const { user } = useAuth();
 
@@ -51,11 +53,15 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
     
     const loadAchievements = async () => {
       try {
+        setIsLoading(true);
+        console.log('Loading achievements data...');
+        
         if (user) {
           // Try to load from Firestore first
           const firestoreAchievements = await getUserAchievements(user.uid);
           
           if (firestoreAchievements) {
+            console.log('Found achievements in Firestore');
             // Ensure all default achievements exist (in case new ones were added)
             const mergedAchievements = defaultAchievements.map(defaultAch => {
               const savedAch = firestoreAchievements.find(a => a.id === defaultAch.id);
@@ -63,13 +69,17 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
             });
             
             setAchievements(mergedAchievements);
+            setIsLoading(false);
             return;
+          } else {
+            console.log('No achievements found in Firestore');
           }
         }
         
         // Fall back to localStorage if not logged in or no Firestore data
         const savedAchievements = localStorage.getItem('achievements');
         if (savedAchievements) {
+          console.log('Loading achievements from localStorage');
           const parsedAchievements = JSON.parse(savedAchievements);
           
           // Ensure all default achievements exist (in case new ones were added)
@@ -79,11 +89,16 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
           });
           
           setAchievements(mergedAchievements);
+        } else {
+          console.log('No achievements found in localStorage, using defaults');
+          setAchievements(defaultAchievements);
         }
       } catch (error) {
         console.error('Error loading achievements:', error);
         // Fallback to default achievements if there's an error
         setAchievements(defaultAchievements);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -151,7 +166,12 @@ export function AchievementsProvider({ children }: { children: React.ReactNode }
   };
 
   return (
-    <AchievementsContext.Provider value={{ achievements, unlockAchievement, resetAchievements }}>
+    <AchievementsContext.Provider value={{ 
+      achievements,
+      isLoading, 
+      unlockAchievement, 
+      resetAchievements 
+    }}>
       {children}
     </AchievementsContext.Provider>
   );
