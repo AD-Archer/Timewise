@@ -162,7 +162,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     if (user && settings && settings.storeMoodDataLocally === false) {
       syncAllLocalEntriesToFirestore();
     }
-  }, [user, settings, settings?.storeMoodDataLocally]);
+  }, [user, settings, settings?.storeMoodDataLocally, entries]);
 
   // Load mood data from Firestore when user signs in
   useEffect(() => {
@@ -262,7 +262,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     };
     
     loadMoodDataFromFirestore();
-  }, [user, settings?.storeMoodDataLocally]);
+  }, [user, settings?.storeMoodDataLocally, entries, settings]);
 
   // Cleanup old deletion markers (run once a day)
   useEffect(() => {

@@ -72,7 +72,18 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
           
           if (userData && userData.analytics) {
             console.log('Found analytics data in Firestore');
-            setAnalytics(userData.analytics);
+            
+            // Convert DailyStat[] to DailyStats[] by adding longestStreak if missing
+            const convertedAnalytics = {
+              ...userData.analytics,
+              dailyStats: userData.analytics.dailyStats.map(stat => ({
+                ...stat,
+                // Add longestStreak property (it doesn't exist in DailyStat)
+                longestStreak: userData.analytics?.longestStreak || 0
+              }))
+            };
+            
+            setAnalytics(convertedAnalytics as Analytics);
             setIsLoading(false);
             return;
           } else {

@@ -6,8 +6,6 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 import { useAuth } from './AuthContext';
 import { getUserSettings, saveUserSettings } from '../firebase/firestore';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
 import { loadUserData, saveUserChatHistory } from '../services/userDataService';
 
 interface Durations {
@@ -43,6 +41,9 @@ export interface Settings {
   preferredMusicService: 'youtube' | 'spotify';
   soundEnabled: boolean;
   soundVolume: number;
+  // Chart view preferences
+  pomodoroChartTimeframe?: 'week' | 'month' | 'year';
+  moodChartTimeframe?: 'week' | 'month' | 'year';
   // Mood tracker settings
   moodTrackingEnabled?: boolean;
   moodTrackingFrequency?: 'endOfSession' | 'endOfPomodoro' | 'daily' | 'manual';

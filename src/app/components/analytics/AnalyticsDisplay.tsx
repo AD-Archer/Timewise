@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { Clock, Target, Flame, Award, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { format, subDays, parseISO } from 'date-fns';
+import { format, subDays, subYears, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 
 interface AnalyticsDisplayProps {
   showCards?: boolean;
@@ -18,7 +19,8 @@ interface ChartDataPoint {
 
 const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
   const { analytics, isLoading: isAnalyticsLoading } = useAnalytics();
-  const [timeframe, setTimeframe] = useState<'week' | 'month'>('week');
+  const { settings, updateSettings } = useSettings();
+  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(settings.pomodoroChartTimeframe || 'week');
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(true);
 
@@ -34,31 +36,88 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
     
     // Small timeout to ensure UI remains responsive
     const timer = setTimeout(() => {
-      const days = timeframe === 'week' ? 7 : 30;
       const endDate = new Date();
+      let dateRange: string[] = [];
       
-      // Create an array of dates for the selected timeframe
-      const dateRange = Array.from({ length: days }, (_, i) => {
-        const date = subDays(endDate, i);
-        return format(date, 'yyyy-MM-dd');
-      }).reverse();
+      if (timeframe === 'week') {
+        // Create an array of dates for the week
+        dateRange = Array.from({ length: 7 }, (_, i) => {
+          const date = subDays(endDate, i);
+          return format(date, 'yyyy-MM-dd');
+        }).reverse();
+        
+        // Map the date range to chart data
+        const data = dateRange.map(date => {
+          const dayStat = analytics.dailyStats.find(stat => stat.date === date);
+          return {
+            date: format(parseISO(date), 'MM/dd'),
+            pomodoros: dayStat?.completedPomodoros || 0,
+            focusTime: dayStat?.totalFocusTime || 0
+          };
+        });
+        
+        setChartData(data);
+      } else if (timeframe === 'month') {
+        // Create an array of dates for the month
+        dateRange = Array.from({ length: 30 }, (_, i) => {
+          const date = subDays(endDate, i);
+          return format(date, 'yyyy-MM-dd');
+        }).reverse();
+        
+        // Map the date range to chart data
+        const data = dateRange.map(date => {
+          const dayStat = analytics.dailyStats.find(stat => stat.date === date);
+          return {
+            date: format(parseISO(date), 'MM/dd'),
+            pomodoros: dayStat?.completedPomodoros || 0,
+            focusTime: dayStat?.totalFocusTime || 0
+          };
+        });
+        
+        setChartData(data);
+      } else if (timeframe === 'year') {
+        // Create an array of months for the year
+        const startDate = subYears(endDate, 1);
+        const months = eachMonthOfInterval({ start: startDate, end: endDate });
+        
+        // Map the months to chart data
+        const data = months.map(month => {
+          const monthStart = format(startOfMonth(month), 'yyyy-MM-dd');
+          const monthEnd = format(endOfMonth(month), 'yyyy-MM-dd');
+          
+          // Sum up all stats for the month
+          const monthStats = analytics.dailyStats.filter(
+            stat => stat.date >= monthStart && stat.date <= monthEnd
+          );
+          
+          const totalPomodoros = monthStats.reduce((sum, stat) => sum + (stat.completedPomodoros || 0), 0);
+          const totalFocusTime = monthStats.reduce((sum, stat) => sum + (stat.totalFocusTime || 0), 0);
+          
+          return {
+            date: format(month, 'MMM'),
+            pomodoros: totalPomodoros,
+            focusTime: totalFocusTime
+          };
+        });
+        
+        setChartData(data);
+      }
       
-      // Map the date range to chart data
-      const data = dateRange.map(date => {
-        const dayStat = analytics.dailyStats.find(stat => stat.date === date);
-        return {
-          date: format(parseISO(date), 'MM/dd'),
-          pomodoros: dayStat ? dayStat.completedPomodoros : 0,
-          focusTime: dayStat ? Math.round(dayStat.totalFocusTime / 60) : 0, // Convert to hours for better visualization
-        };
-      });
-      
-      setChartData(data);
       setIsChartLoading(false);
     }, 100);
     
     return () => clearTimeout(timer);
   }, [timeframe, analytics.dailyStats]);
+
+  // Update settings when timeframe changes
+  const prevTimeframeRef = useRef(timeframe);
+  useEffect(() => {
+    // Only update settings if timeframe actually changed
+    if (prevTimeframeRef.current !== timeframe) {
+      updateSettings({ pomodoroChartTimeframe: timeframe });
+      prevTimeframeRef.current = timeframe;
+    }
+  }, [timeframe, updateSettings]);
 
   // Show loading state
   if (isAnalyticsLoading) {
@@ -137,6 +196,16 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
               }`}
             >
               Month
+            </button>
+            <button
+              onClick={() => setTimeframe('year')}
+              className={`px-3 py-1 rounded-full text-sm ${
+                timeframe === 'year' 
+                  ? 'bg-pink-600 text-white' 
+                  : 'bg-white/20 text-white/80 hover:bg-white/30'
+              }`}
+            >
+              Year
             </button>
           </div>
         </div>
