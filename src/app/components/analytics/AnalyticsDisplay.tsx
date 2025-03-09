@@ -20,6 +20,7 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
   const { analytics } = useAnalytics();
   const [timeframe, setTimeframe] = useState<'week' | 'month'>('week');
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const formatTime = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
@@ -29,30 +30,45 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
 
   // Prepare chart data based on timeframe
   useEffect(() => {
-    const days = timeframe === 'week' ? 7 : 30;
-    const endDate = new Date();
+    setIsLoading(true);
     
-    // Create an array of dates for the selected timeframe
-    const dateRange = Array.from({ length: days }, (_, i) => {
-      const date = subDays(endDate, i);
-      return format(date, 'yyyy-MM-dd');
-    }).reverse();
+    // Small timeout to ensure UI remains responsive
+    const timer = setTimeout(() => {
+      const days = timeframe === 'week' ? 7 : 30;
+      const endDate = new Date();
+      
+      // Create an array of dates for the selected timeframe
+      const dateRange = Array.from({ length: days }, (_, i) => {
+        const date = subDays(endDate, i);
+        return format(date, 'yyyy-MM-dd');
+      }).reverse();
+      
+      // Map the date range to chart data
+      const data = dateRange.map(date => {
+        const dayStat = analytics.dailyStats.find(stat => stat.date === date);
+        return {
+          date: format(parseISO(date), 'MM/dd'),
+          pomodoros: dayStat ? dayStat.completedPomodoros : 0,
+          focusTime: dayStat ? Math.round(dayStat.totalFocusTime / 60) : 0, // Convert to minutes
+        };
+      });
+      
+      setChartData(data);
+      setIsLoading(false);
+    }, 100);
     
-    // Map the date range to chart data
-    const data = dateRange.map(date => {
-      const dayStat = analytics.dailyStats.find(stat => stat.date === date);
-      return {
-        date: format(parseISO(date), 'MM/dd'),
-        pomodoros: dayStat ? dayStat.completedPomodoros : 0,
-        focusTime: dayStat ? Math.round(dayStat.totalFocusTime / 60) : 0, // Convert to minutes
-      };
-    });
-    
-    setChartData(data);
+    return () => clearTimeout(timer);
   }, [analytics.dailyStats, timeframe]);
 
   return (
     <div className="space-y-6">
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+          <div className="animate-pulse text-white">Loading analytics...</div>
+        </div>
+      )}
+
       {/* Stats Cards - Only show if showCards prop is true */}
       {showCards && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
