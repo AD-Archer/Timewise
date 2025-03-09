@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useMood } from '../../contexts/MoodContext';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -15,10 +15,16 @@ const MoodTracker = () => {
   const [showAddTag, setShowAddTag] = useState(false);
   const [timeframe, setTimeframe] = useState<'week' | 'month'>('week');
   const [averageMood, setAverageMood] = useState<number | null>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
+  
+  interface ChartDataPoint {
+    date: string;
+    mood: number;
+  }
+  
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
   // Calculate date ranges based on timeframe
-  const getDateRange = () => {
+  const getDateRange = useCallback(() => {
     const endDate = new Date();
     const startDate = timeframe === 'week' 
       ? subDays(endDate, 7) 
@@ -28,7 +34,7 @@ const MoodTracker = () => {
       start: startOfDay(startDate).toISOString(),
       end: endOfDay(endDate).toISOString()
     };
-  };
+  }, [timeframe]);
 
   // Update chart data and average mood when entries or timeframe changes
   useEffect(() => {
@@ -45,7 +51,7 @@ const MoodTracker = () => {
     }));
     
     setChartData(data);
-  }, [entries, timeframe, getEntriesByDateRange, getAverageMood]);
+  }, [entries, getEntriesByDateRange, getAverageMood, getDateRange]);
 
   // Handle mood selection
   const handleMoodSelect = (mood: number) => {
