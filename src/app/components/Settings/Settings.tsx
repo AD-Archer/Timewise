@@ -229,18 +229,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
           <h4 className="text-sm font-medium text-white">Data Management</h4>
           <p className="text-xs text-white/70 mb-3">
-            You currently have {entries.length} mood entries stored. 
-            Use the button below to permanently delete all your mood entries.
+            You currently have {entries.length} mood entries stored.
           </p>
-          <div className="flex justify-center">
-            <button 
-              onClick={clearAllEntries}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center"
-            >
-              <Trash2 size={16} className="mr-2" />
-              Delete All {entries.length} Entries
-            </button>
-          </div>
         </div>
 
         {/* Mood Entries Management */}
