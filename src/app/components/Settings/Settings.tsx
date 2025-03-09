@@ -4,11 +4,13 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useBackground } from '../../contexts/BackgroundContext';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
+import { useMood } from '../../contexts/MoodContext';
 import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
-import { Target, Clock, Flame, Award } from 'lucide-react';
+import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
 import Achievements from '../analytics/Achievements'; 
 import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
+import { format } from 'date-fns';
 
 interface SettingsProps {
   currentTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
@@ -19,6 +21,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const { backgrounds, currentBackground, setBackground } = useBackground();
   const { analytics, resetAnalytics } = useAnalytics();
   const { resetAchievements } = useAchievements();
+  const { entries, deleteEntry, tags } = useMood();
   const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
   const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
   const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
@@ -27,6 +30,8 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const [autoStartPomodoros, setAutoStartPomodoros] = useState(settings.autoStartPomodoros);
   const [newPlaylistUrl, setNewPlaylistUrl] = useState('');
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSearchTag, setSelectedSearchTag] = useState<string | null>(null);
 
   useEffect(() => {
     setPomodoro(Math.floor(settings.durations.pomodoro / 60));
@@ -124,6 +129,30 @@ const Settings = ({ currentTab }: SettingsProps) => {
     return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
   };
 
+  // Render mood icon based on mood value (1-5 scale, where 1 is good and 5 is bad)
+  const renderMoodIcon = (mood: number) => {
+    const moodValue = 6 - mood; // Convert to 5=good, 1=bad scale for display
+    switch (moodValue) {
+      case 1: return <span className="text-red-500">😞</span>;
+      case 2: return <span className="text-orange-500">😕</span>;
+      case 3: return <span className="text-yellow-500">😐</span>;
+      case 4: return <span className="text-green-500">🙂</span>;
+      case 5: return <span className="text-pink-500">😍</span>;
+      default: return null;
+    }
+  };
+
+  // Filter mood entries based on search term and selected tag
+  const filteredEntries = entries.filter(entry => {
+    const matchesSearchTerm = searchTerm === '' || 
+      (entry.note && entry.note.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesTag = selectedSearchTag === null || 
+      (entry.tags && entry.tags.includes(selectedSearchTag));
+    
+    return matchesSearchTerm && matchesTag;
+  });
+
   if (currentTab === 'mood') {
     return (
       <div className="space-y-4">
@@ -199,6 +228,112 @@ const Settings = ({ currentTab }: SettingsProps) => {
           <p className="text-xs text-white/50 mt-1">
             When enabled, your mood data will only be stored on this device and won&apos;t be synced to the cloud.
           </p>
+        </div>
+
+        {/* Mood Entries Management */}
+        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
+          <h4 className="text-sm font-medium text-white">Manage Mood Entries</h4>
+          
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search in notes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-white/50"
+              />
+            </div>
+            <div className="flex-1">
+              <select
+                value={selectedSearchTag || ''}
+                onChange={(e) => setSelectedSearchTag(e.target.value || null)}
+                className="w-full px-3 py-1.5 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              >
+                <option value="">All Tags</option>
+                {tags.map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+            </div>
+            {(searchTerm || selectedSearchTag) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedSearchTag(null);
+                }}
+                className="px-3 py-1.5 bg-pink-600/80 hover:bg-pink-600 text-white text-sm rounded-lg transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+          
+          {entries.length === 0 ? (
+            <p className="text-white/60 text-sm py-2">No mood entries yet.</p>
+          ) : filteredEntries.length === 0 ? (
+            <p className="text-white/60 text-sm py-2">No entries match your search.</p>
+          ) : (
+            <div className="max-h-80 overflow-y-auto pr-1">
+              <table className="w-full text-sm text-white/80">
+                <thead className="text-xs uppercase bg-white/10">
+                  <tr>
+                    <th className="px-2 py-2 text-left">Date</th>
+                    <th className="px-2 py-2 text-left">Mood</th>
+                    <th className="px-2 py-2 text-left">Note</th>
+                    <th className="px-2 py-2 text-left">Tags</th>
+                    <th className="px-2 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEntries.slice().reverse().map(entry => (
+                    <tr key={entry.id} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        {format(new Date(entry.date), 'MMM d, yyyy h:mm a')}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        {renderMoodIcon(entry.mood)}
+                      </td>
+                      <td className="px-2 py-2 truncate max-w-[150px]">
+                        {entry.note || <span className="text-white/40">No note</span>}
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {entry.tags && entry.tags.length > 0 ? (
+                            entry.tags.map(tag => (
+                              <span 
+                                key={tag} 
+                                className="px-1.5 py-0.5 bg-white/10 rounded-full text-xs text-white/80 cursor-pointer hover:bg-pink-600/30"
+                                onClick={() => setSelectedSearchTag(tag)}
+                              >
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-white/40 text-xs">No tags</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <button 
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this mood entry?')) {
+                              deleteEntry(entry.id);
+                            }
+                          }}
+                          className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                          aria-label="Delete entry"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     );
