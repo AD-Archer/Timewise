@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 import { useSettings } from './SettingsContext';
+import { useAuth } from './AuthContext';
+import { getUserTimerPresets, saveUserTimerPresets } from '../firebase/firestore';
 
 // Define the preset interface
 export interface TimerPreset {
@@ -77,40 +79,87 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [presets, setPresets] = useState<TimerPreset[]>(defaultPresets);
   const [activePresetId, setActivePresetId] = useState<string | null>('default');
   const [isClient, setIsClient] = useState(false);
+  const { user } = useAuth();
 
   // Set isClient to true after initial render
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Load presets from localStorage
+  // Load presets from Firestore if user is logged in, otherwise from localStorage
   useEffect(() => {
     if (!isClient) return;
     
-    const savedPresets = getLocalStorage<TimerPreset[]>('timerPresets', defaultPresets);
-    const savedActivePresetId = getLocalStorage<string | null>('activePresetId', 'default');
-    
-    // Make sure we always have the default presets
-    const mergedPresets = [...savedPresets];
-    
-    // Add default presets if they don't exist in saved presets
-    defaultPresets.forEach(defaultPreset => {
-      if (!mergedPresets.some(p => p.id === defaultPreset.id)) {
-        mergedPresets.push(defaultPreset);
+    const loadPresets = async () => {
+      try {
+        if (user) {
+          // Try to load from Firestore first
+          const firestoreData = await getUserTimerPresets(user.uid);
+          
+          if (firestoreData) {
+            // Make sure we always have the default presets
+            const mergedPresets = [...firestoreData.presets];
+            
+            // Add default presets if they don't exist in saved presets
+            defaultPresets.forEach(defaultPreset => {
+              if (!mergedPresets.some(p => p.id === defaultPreset.id)) {
+                mergedPresets.push(defaultPreset);
+              }
+            });
+            
+            setPresets(mergedPresets);
+            setActivePresetId(firestoreData.activePresetId);
+            return;
+          }
+        }
+        
+        // Fall back to localStorage if not logged in or no Firestore data
+        const savedPresets = getLocalStorage<TimerPreset[]>('timerPresets', defaultPresets);
+        const savedActivePresetId = getLocalStorage<string | null>('activePresetId', 'default');
+        
+        // Make sure we always have the default presets
+        const mergedPresets = [...savedPresets];
+        
+        // Add default presets if they don't exist in saved presets
+        defaultPresets.forEach(defaultPreset => {
+          if (!mergedPresets.some(p => p.id === defaultPreset.id)) {
+            mergedPresets.push(defaultPreset);
+          }
+        });
+        
+        setPresets(mergedPresets);
+        setActivePresetId(savedActivePresetId);
+      } catch (error) {
+        console.error('Error loading timer presets:', error);
+        setPresets(defaultPresets);
+        setActivePresetId('default');
       }
-    });
+    };
     
-    setPresets(mergedPresets);
-    setActivePresetId(savedActivePresetId);
-  }, [isClient]);
+    loadPresets();
+  }, [isClient, user]);
 
-  // Save presets to localStorage whenever they change
+  // Save presets to Firestore if user is logged in, otherwise to localStorage
   useEffect(() => {
-    if (isClient) {
-      setLocalStorage('timerPresets', presets);
-      setLocalStorage('activePresetId', activePresetId);
-    }
-  }, [presets, activePresetId, isClient]);
+    if (!isClient) return;
+    
+    const savePresets = async () => {
+      try {
+        if (user) {
+          // Save to Firestore if user is logged in
+          await saveUserTimerPresets(user.uid, presets, activePresetId);
+        } else {
+          // Save to localStorage if not logged in
+          setLocalStorage('timerPresets', presets);
+          setLocalStorage('activePresetId', activePresetId);
+        }
+      } catch (error) {
+        console.error('Error saving timer presets:', error);
+      }
+    };
+    
+    savePresets();
+  }, [presets, activePresetId, isClient, user]);
 
   // Add a new preset
   const addPreset = (preset: Omit<TimerPreset, 'id'>) => {

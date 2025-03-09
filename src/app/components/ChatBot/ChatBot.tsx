@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Send, Bot, User, ArrowDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User, ArrowDown, Lock } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -10,6 +12,8 @@ interface Message {
 }
 
 const ChatBot: React.FC = () => {
+  const { user } = useAuth();
+  const { settings, chatHistory, addChatMessage, clearChatHistory, exportChatHistory } = useSettings();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -20,6 +24,7 @@ const ChatBot: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -37,9 +42,32 @@ const ChatBot: React.FC = () => {
     setShowScrollButton(isScrolledUp);
   };
 
+  // Load chat history if available
+  useEffect(() => {
+    if (chatHistory && chatHistory.length > 0 && user) {
+      const loadedMessages = chatHistory.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+      }));
+      
+      if (loadedMessages.length > 0) {
+        setMessages(loadedMessages);
+      }
+    }
+  }, [chatHistory, user]);
+
   const handleSendMessage = async () => {
     if (!input.trim()) return;
-
+    
+    // Check if user is authenticated
+    if (!user) {
+      setAuthError('Please sign in to use the AI assistant');
+      return;
+    }
+    
+    setAuthError(null);
+    
     const userMessage: Message = {
       role: 'user',
       content: input,
@@ -54,6 +82,9 @@ const ChatBot: React.FC = () => {
     setTimeout(() => handleScroll(), 100);
 
     try {
+      // Get the auth token
+      const authToken = await user.getIdToken();
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -64,11 +95,14 @@ const ChatBot: React.FC = () => {
             role: msg.role,
             content: msg.content,
           })),
+          customApiKey: settings.customOpenAIKey,
+          authToken,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response from AI');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response from AI');
       }
 
       const data = await response.json();
@@ -79,11 +113,28 @@ const ChatBot: React.FC = () => {
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      const updatedMessages = [...messages, userMessage, assistantMessage];
+      setMessages(updatedMessages);
+      
+      // Save chat message to memory if chat export is enabled
+      if (settings.chatExportEnabled) {
+        // Add messages to chat history
+        addChatMessage({
+          role: userMessage.role,
+          content: userMessage.content,
+          timestamp: userMessage.timestamp.getTime()
+        });
+        
+        addChatMessage({
+          role: assistantMessage.role,
+          content: assistantMessage.content,
+          timestamp: assistantMessage.timestamp.getTime()
+        });
+      }
       
       // Check if scroll button should be shown after receiving response
       setTimeout(() => handleScroll(), 100);
-    } catch (error) {
+    } catch (error: Error | unknown) {
       console.error('Error sending message:', error);
       
       // Add error message
@@ -91,7 +142,7 @@ const ChatBot: React.FC = () => {
         ...prev,
         {
           role: 'assistant',
-          content: 'Sorry, I had trouble processing that. Please try again.',
+          content: error instanceof Error ? error.message : 'Sorry, I had trouble processing that. Please try again.',
           timestamp: new Date(),
         },
       ]);
@@ -109,6 +160,42 @@ const ChatBot: React.FC = () => {
       handleSendMessage();
     }
   };
+
+  // If user is not authenticated, show login prompt
+  if (!user) {
+    return (
+      <div className="w-full flex flex-col bg-black/30 backdrop-blur-md rounded-xl overflow-hidden shadow-lg border border-white/10 h-[700px]">
+        <div className="h-[60px] flex-none p-3 bg-pink-600/80 text-white">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Bot size={18} />
+            Mood Assistant
+          </h2>
+          <p className="text-xs text-white/70">Talk to me about how you&apos;re feeling today</p>
+        </div>
+        
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="bg-gray-800/50 p-6 rounded-xl border border-white/10 max-w-md">
+            <div className="mb-4 text-pink-500">
+              <Lock size={48} className="mx-auto" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Authentication Required</h3>
+            <p className="text-gray-300 mb-6">
+              Please sign in to use the AI assistant. This helps us prevent abuse and ensures the service remains available for everyone.
+            </p>
+            <button
+              onClick={() => {
+                // Dispatch a custom event to open the auth modal
+                window.dispatchEvent(new CustomEvent('openAuthModal'));
+              }}
+              className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col bg-black/30 backdrop-blur-md rounded-xl overflow-hidden shadow-lg border border-white/10 h-[700px]">
@@ -172,6 +259,19 @@ const ChatBot: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {authError && (
+          <div className="flex justify-center">
+            <div className="max-w-[80%] p-3 rounded-lg bg-red-900/50 text-white border border-red-700">
+              <div className="flex items-center gap-2 mb-1">
+                <Lock size={16} className="text-red-300" />
+                <span className="text-xs opacity-70">Authentication Error</span>
+              </div>
+              <p className="whitespace-pre-wrap">{authError}</p>
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
         
         {/* Scroll to bottom button */}

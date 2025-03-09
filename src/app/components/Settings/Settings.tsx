@@ -5,7 +5,7 @@ import { useBackground } from '../../contexts/BackgroundContext';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
 import { useMood } from '../../contexts/MoodContext';
-import type { PlaylistInfo } from '../../contexts/SettingsContext';
+import type { PlaylistInfo, SpotifyPlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
 import Achievements from '../Analytics/Achievements'; 
@@ -17,7 +17,17 @@ interface SettingsProps {
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
-  const { settings, updateSettings } = useSettings();
+  const { 
+    settings, 
+    updateSettings, 
+    spotifyPlaylists, 
+    currentSpotifyPlaylistUri, 
+    updateSpotifyPlaylists, 
+    setCurrentSpotifyPlaylistUri,
+    chatHistory,
+    clearChatHistory,
+    exportChatHistory
+  } = useSettings();
   const { backgrounds, currentBackground, setBackground } = useBackground();
   const { analytics, resetAnalytics } = useAnalytics();
   const { resetAchievements } = useAchievements();
@@ -79,6 +89,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
       id: playlistId,
       name: newPlaylistName || 'Untitled Playlist',
       url: newPlaylistUrl,
+      videos: [],
     };
 
     const updatedPlaylists = [...(settings.playlists || []), newPlaylist];
@@ -546,24 +557,34 @@ const Settings = ({ currentTab }: SettingsProps) => {
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
           <h4 className="text-sm font-medium text-white">Privacy Settings</h4>
           <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs">Save chat history:</label>
+            <label className="text-white/80 text-xs">Enable chat history export:</label>
             <input 
               type="checkbox" 
-              checked={settings.saveChatHistory !== false}
-              onChange={(e) => updateSettings({ saveChatHistory: e.target.checked })} 
+              checked={settings.chatExportEnabled !== false}
+              onChange={(e) => updateSettings({ chatExportEnabled: e.target.checked })} 
               className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
             />
           </div>
-          <button 
-            onClick={() => {
-              if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
-                updateSettings({ chatHistory: [] });
-              }
-            }}
-            className="mt-2 px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-          >
-            Clear Chat History
-          </button>
+          <div className="flex gap-2 mt-2">
+            <button 
+              onClick={() => {
+                if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                  clearChatHistory();
+                }
+              }}
+              className="text-xs px-2 py-1 bg-red-600/30 hover:bg-red-600/50 text-white rounded transition-colors"
+            >
+              Clear Chat History
+            </button>
+            {settings.chatExportEnabled && (
+              <button 
+                onClick={exportChatHistory}
+                className="text-xs px-2 py-1 bg-blue-600/30 hover:bg-blue-600/50 text-white rounded transition-colors"
+              >
+                Export Chat History
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -642,16 +663,16 @@ const Settings = ({ currentTab }: SettingsProps) => {
         {/* Tabs for YouTube and Spotify */}
         <div className="flex border-b border-white/10 mb-4">
           <button 
-            className={`px-4 py-2 text-sm font-medium ${settings.currentSpotifyPlaylistUri ? 'text-white/50' : 'text-white border-b-2 border-pink-500'}`}
-            onClick={() => updateSettings({ currentSpotifyPlaylistUri: null })}
+            className={`px-4 py-2 text-sm font-medium ${currentSpotifyPlaylistUri ? 'text-white/50' : 'text-white border-b-2 border-pink-500'}`}
+            onClick={() => setCurrentSpotifyPlaylistUri(null)}
           >
             YouTube
           </button>
           <button 
-            className={`px-4 py-2 text-sm font-medium ${settings.currentSpotifyPlaylistUri ? 'text-white border-b-2 border-pink-500' : 'text-white/50'}`}
+            className={`px-4 py-2 text-sm font-medium ${currentSpotifyPlaylistUri ? 'text-white border-b-2 border-pink-500' : 'text-white/50'}`}
             onClick={() => {
-              if (settings.spotifyPlaylists.length > 0 && !settings.currentSpotifyPlaylistUri) {
-                updateSettings({ currentSpotifyPlaylistUri: settings.spotifyPlaylists[0].uri });
+              if (spotifyPlaylists.length > 0 && !currentSpotifyPlaylistUri) {
+                setCurrentSpotifyPlaylistUri(spotifyPlaylists[0].uri);
               }
             }}
           >
@@ -659,7 +680,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </button>
         </div>
         
-        {settings.currentSpotifyPlaylistUri ? (
+        {currentSpotifyPlaylistUri ? (
           // Spotify Playlists Section
           <>
             <div className="space-y-2 p-3 bg-white/5 rounded-lg">
@@ -673,13 +694,13 @@ const Settings = ({ currentTab }: SettingsProps) => {
             <div className="flex-1 min-h-0">
               <h4 className="text-sm font-medium text-white mb-2">Your Spotify Playlists</h4>
               <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
-                {settings.spotifyPlaylists?.length > 0 ? (
+                {spotifyPlaylists?.length > 0 ? (
                   <div className="space-y-2">
-                    {settings.spotifyPlaylists.map((playlist) => (
+                    {spotifyPlaylists.map((playlist) => (
                       <div 
                         key={playlist.id} 
                         className={`p-2 rounded-lg flex items-center justify-between ${
-                          settings.currentSpotifyPlaylistUri === playlist.uri 
+                          currentSpotifyPlaylistUri === playlist.uri 
                             ? 'bg-green-600/20 border border-green-500/50' 
                             : 'bg-white/5'
                         }`}
@@ -701,14 +722,14 @@ const Settings = ({ currentTab }: SettingsProps) => {
                         </div>
                         <div className="flex gap-2 ml-2">
                           <button
-                            onClick={() => updateSettings({ currentSpotifyPlaylistUri: playlist.uri })}
+                            onClick={() => setCurrentSpotifyPlaylistUri(playlist.uri)}
                             className={`px-2 py-1 text-xs rounded ${
-                              settings.currentSpotifyPlaylistUri === playlist.uri
+                              currentSpotifyPlaylistUri === playlist.uri
                                 ? 'bg-green-600 text-white'
                                 : 'bg-white/10 text-white/70 hover:bg-white/20'
                             }`}
                           >
-                            {settings.currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
+                            {currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
                           </button>
                         </div>
                       </div>

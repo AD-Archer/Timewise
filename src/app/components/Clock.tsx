@@ -2,11 +2,23 @@
 
 import { useState, useEffect } from 'react';
 
+interface TimeDisplayProps {
+  size?: 'small' | 'medium' | 'large';
+  showSeconds?: boolean;
+  showDate?: boolean;
+  className?: string;
+}
+
 /**
- * Clock component that displays the current local time
+ * TimeDisplay component that displays the current local time
  * Updates every second to show accurate time
  */
-const Clock = () => {
+const TimeDisplay: React.FC<TimeDisplayProps> = ({ 
+  size = 'medium', 
+  showSeconds = true, 
+  showDate = true,
+  className = ''
+}) => {
   // Start with null to prevent hydration mismatch
   const [time, setTime] = useState<Date | null>(null);
   
@@ -26,18 +38,17 @@ const Clock = () => {
   // If time is null (during server rendering), show a placeholder
   if (!time) {
     return (
-      <div className="flex flex-col items-center justify-center p-4 bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg">
-        <div className="text-3xl font-semibold mb-1">--:--:-- --</div>
-        <div className="text-sm opacity-80">Loading...</div>
+      <div className={`flex flex-col items-center justify-center p-2 bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg ${className}`}>
+        <div className="text-xl font-semibold">--:--</div>
       </div>
     );
   }
   
-  // Format time as HH:MM:SS
+  // Format time as HH:MM or HH:MM:SS based on showSeconds prop
   const formattedTime = time.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
+    second: showSeconds ? '2-digit' : undefined,
     hour12: true
   });
   
@@ -45,16 +56,24 @@ const Clock = () => {
   const formattedDate = time.toLocaleDateString([], {
     weekday: 'long',
     month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+    day: 'numeric'
   });
   
+  // Determine size classes
+  const sizeClasses = {
+    small: 'p-1 text-sm',
+    medium: 'p-2 text-base',
+    large: 'p-3 text-xl md:text-2xl'
+  };
+  
+  const containerClass = sizeClasses[size] || sizeClasses.medium;
+  
   return (
-    <div className="flex flex-col items-center justify-center p-3 md:p-4 bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg">
-      <div className="text-2xl md:text-3xl font-semibold mb-0 md:mb-1">{formattedTime}</div>
-      <div className="text-xs md:text-sm opacity-80">{formattedDate}</div>
+    <div className={`flex flex-col items-center justify-center ${containerClass} bg-black/30 backdrop-blur-sm rounded-lg text-white shadow-lg ${className}`}>
+      <div className="font-semibold">{formattedTime}</div>
+      {showDate && <div className="text-xs opacity-80 mt-0.5">{formattedDate}</div>}
     </div>
   );
 };
 
-export default Clock; 
+export default TimeDisplay; 
