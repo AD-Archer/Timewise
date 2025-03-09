@@ -4,15 +4,14 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useBackground } from '../../contexts/BackgroundContext';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
-import { useMood, MoodEntry } from '../../contexts/MoodContext';
+import { useMood } from '../../contexts/MoodContext';
 import { useAuth } from '../../contexts/AuthContext';
-import type { PlaylistInfo, SpotifyPlaylistInfo } from '../../contexts/SettingsContext';
+import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
-import { Target, Clock, Flame, Award, Trash2, Edit, Save, X } from 'lucide-react';
+import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
 import Achievements from '../Analytics/Achievements'; 
 import AnalyticsDisplay from '../Analytics/AnalyticsDisplay';
 import { format } from 'date-fns';
-import { toast } from 'react-toastify';
 
 interface SettingsProps {
   currentTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
@@ -24,9 +23,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
     updateSettings, 
     spotifyPlaylists, 
     currentSpotifyPlaylistUri, 
-    updateSpotifyPlaylists, 
     setCurrentSpotifyPlaylistUri,
-    chatHistory,
     clearChatHistory,
     exportChatHistory
   } = useSettings();
@@ -166,10 +163,6 @@ const Settings = ({ currentTab }: SettingsProps) => {
     
     return matchesSearchTerm && matchesTag;
   });
-
-  const handleEditTagToggle = (tag: string) => {
-    // This function is kept for reference but not used anymore
-  };
 
   if (currentTab === 'mood') {
     return (

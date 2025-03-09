@@ -126,7 +126,7 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     };
 
     syncAllLocalEntriesToFirestore();
-  }, [user, settings?.storeMoodDataLocally, entries]);
+  }, [user, settings, settings?.storeMoodDataLocally, entries]);
 
   // Add a new mood entry
   const addEntry = (mood: number, note: string, tags: string[] = []) => {

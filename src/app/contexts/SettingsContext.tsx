@@ -28,7 +28,7 @@ export interface SpotifyPlaylistInfo {
   imageUrl?: string;
 }
 
-interface Settings {
+export interface Settings {
   durations: Durations;
   pomodoroCount: number;  // Track completed pomodoros
   targetPomodoros: number;  // Number of pomodoros before long break

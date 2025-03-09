@@ -18,9 +18,9 @@ import TimerPresets from "./components/Timer/TimerPresets";
 import ChatBot from "./components/ChatBot/ChatBot";
 import AuthButton from "./components/Auth/AuthButton";
 import { useAuth } from "./contexts/AuthContext";
-import { useSettings } from "./contexts/SettingsContext";
+import { useSettings, PlaylistInfo, Settings } from "./contexts/SettingsContext";
 import { saveUserSettings, loadUserData } from "./services/userDataService";
-import type { PlaylistInfo } from './contexts/SettingsContext';
+import type { UserSettings } from "./services/userDataService";
 import { useMood } from "./contexts/MoodContext";
 
 // Define the Playlist type to match userDataService
@@ -59,17 +59,17 @@ export default function Home() {
             
             // Convert playlist format if needed
             if (compatibleSettings.playlists) {
-              const convertedPlaylists = compatibleSettings.playlists.map((playlist: any) => ({
+              const convertedPlaylists = compatibleSettings.playlists.map((playlist: {id: string, name: string, videos?: string[]}) => ({
                 id: playlist.id,
                 name: playlist.name,
                 url: `https://youtube.com/playlist?list=${playlist.id}`,
-                videos: playlist.videos || [],
+                videos: playlist.videos || []
               }));
               
               compatibleSettings.playlists = convertedPlaylists as PlaylistInfo[];
             }
             
-            updateSettings(compatibleSettings as any);
+            updateSettings(compatibleSettings as Partial<Settings>);
           }
           
           // Load mood data if it exists and storeMoodDataLocally is false
@@ -90,7 +90,6 @@ export default function Home() {
                     return;
                   }
                   
-                  const entryDate = new Date(timestamp).toISOString();
                   const existingEntry = entries.find(e => new Date(e.date).getTime() === timestamp);
                   
                   if (!existingEntry) {
@@ -133,7 +132,7 @@ export default function Home() {
           };
           
           // Only save the settings object to Firestore (not Spotify playlists or chat history)
-          await saveUserSettings(user.uid, convertedSettings as any);
+          await saveUserSettings(user.uid, convertedSettings as UserSettings);
         } catch (error) {
           console.error('Error saving user settings:', error);
         }

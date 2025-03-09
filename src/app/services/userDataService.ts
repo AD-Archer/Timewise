@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 // Types for user data
-interface UserSettings {
+export interface UserSettings {
   durations: {
     pomodoro: number;
     shortBreak: number;
@@ -55,12 +55,6 @@ interface Playlist {
   id: string;
   name: string;
   videos: string[];
-}
-
-interface SpotifyPlaylist {
-  id: string;
-  name: string;
-  uri: string;
 }
 
 interface DailyStat {

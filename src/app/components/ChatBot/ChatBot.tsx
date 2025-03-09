@@ -13,7 +13,7 @@ interface Message {
 
 const ChatBot: React.FC = () => {
   const { user } = useAuth();
-  const { settings, chatHistory, addChatMessage, clearChatHistory, exportChatHistory } = useSettings();
+  const { settings, chatHistory, addChatMessage } = useSettings();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',

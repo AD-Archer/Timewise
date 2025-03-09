@@ -304,6 +304,31 @@ export default function SpotifyPlayer() {
     }
   }, []);
 
+  // Fetch playlists from Spotify API
+  const fetchPlaylists = useCallback(async (): Promise<SpotifyPlaylistInfo[]> => {
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch playlists');
+      }
+      
+      const data: SpotifyPlaylistResponse = await response.json();
+      
+      return data.items.map(item => ({
+        id: item.id,
+        name: item.name,
+        uri: item.uri,
+        imageUrl: item.images[0]?.url
+      }));
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      return [];
+    }
+  }, [token]);
+
   // Fetch user's playlists
   useEffect(() => {
     const fetchUserPlaylists = async () => {
@@ -320,42 +345,15 @@ export default function SpotifyPlayer() {
           updateSpotifyPlaylists(fetchedPlaylists);
         }
       } catch (error) {
-        console.error('Error fetching playlists:', error);
-        logout();
+        console.error('Error fetching user playlists:', error);
+        if (error instanceof Error && error.message.includes('The access token expired')) {
+          logout();
+        }
       }
     };
     
     fetchUserPlaylists();
-  }, [token, spotifyPlaylists, updateSpotifyPlaylists, logout]);
-
-  // Fetch playlists from Spotify API
-  const fetchPlaylists = async (): Promise<SpotifyPlaylistInfo[]> => {
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired, clear it
-          logout();
-          return [];
-        }
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json() as SpotifyPlaylistResponse;
-      return data.items.map((playlist) => ({
-        id: playlist.id,
-        name: playlist.name,
-        uri: playlist.uri,
-        imageUrl: playlist.images && playlist.images.length > 0 ? playlist.images[0].url : undefined
-      }));
-    } catch (error) {
-      console.error('Error fetching playlists:', error);
-      return [];
-    }
-  };
+  }, [token, spotifyPlaylists, updateSpotifyPlaylists, logout, fetchPlaylists]);
 
   // Play a specific playlist
   const playPlaylist = useCallback(async (playlistUri: string) => {
