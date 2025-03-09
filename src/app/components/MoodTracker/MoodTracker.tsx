@@ -3,7 +3,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMood } from '../../contexts/MoodContext';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  TooltipProps
+} from 'recharts';
+import { 
+  ValueType, 
+  NameType 
+} from 'recharts/types/component/DefaultTooltipContent';
 import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X } from 'lucide-react';
 
 const MoodTracker = () => {
@@ -105,8 +118,15 @@ const MoodTracker = () => {
   };
 
   // Custom tick formatter for Y-axis to render emotion icons
-  const CustomYAxisTick = (props: any) => {
-    const { x, y, payload } = props;
+  type CustomYAxisTickProps = {
+    x: number;
+    y: number;
+    payload: {
+      value: number;
+    };
+  };
+
+  const CustomYAxisTick = ({ x, y, payload }: CustomYAxisTickProps) => {
     return (
       <g transform={`translate(${x},${y})`}>
         <foreignObject width="24" height="24" x="-28" y="-12">
@@ -117,9 +137,13 @@ const MoodTracker = () => {
   };
 
   // Custom tooltip formatter to show emotion icon
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ 
+    active, 
+    payload, 
+    label 
+  }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
-      const mood = payload[0].value;
+      const mood = payload[0].value as number;
       return (
         <div className="bg-black/80 p-2 rounded-md">
           <p className="text-white text-sm">{`Date: ${label}`}</p>
@@ -312,11 +336,11 @@ const MoodTracker = () => {
                       domain={[5, 1]} 
                       ticks={[5, 4, 3, 2, 1]} 
                       stroke="rgba(255,255,255,0.5)"
-                      tick={<CustomYAxisTick />}
+                      tick={CustomYAxisTick}
                       label={{ value: 'Mood', angle: -90, position: 'insideLeft', style: { fill: 'rgba(255,255,255,0.5)' } }}
                     />
                     <Tooltip 
-                      content={<CustomTooltip />}
+                      content={CustomTooltip}
                     />
                     <Line 
                       type="monotone" 
