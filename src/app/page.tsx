@@ -14,6 +14,7 @@ import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { MusicProvider } from './contexts/MusicContext';
 import Clock from "./components/Clock";
 import IntroAnimation from "./components/IntroAnimation";
+import TimerPresets from "./components/Timer/TimerPresets";
 
 export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
@@ -135,6 +136,9 @@ export default function Home() {
               
               <div className={`w-full max-w-2xl transition-all duration-300 ${activeTab === 'timer' ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full absolute pointer-events-none'}`}>
                 <Timer />
+                <div className="mt-6">
+                  <TimerPresets />
+                </div>
               </div>
             </div>
             
