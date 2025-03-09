@@ -8,8 +8,8 @@ import { useMood } from '../../contexts/MoodContext';
 import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
-import Achievements from '../analytics/Achievements'; 
-import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
+import Achievements from '../Analytics/Achievements'; 
+import AnalyticsDisplay from '../Analytics/AnalyticsDisplay';
 import { format } from 'date-fns';
 
 interface SettingsProps {
