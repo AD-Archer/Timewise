@@ -194,53 +194,12 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </div>
         </div>
         
-        {/* Data Privacy */}
-        <div className="space-y-2 p-3 bg-white/5 rounded-lg">
-          <h4 className="text-sm font-medium text-white">Data Privacy</h4>
-          <div className="flex items-center gap-2">
-            <label className="text-white/80 text-xs">Store mood data locally only:</label>
-            <input 
-              type="checkbox" 
-              checked={settings.storeMoodDataLocally !== false}
-              onChange={(e) => {
-                const newValue = e.target.checked;
-                
-                // If user is turning off local-only storage, show a confirmation dialog
-                if (!newValue && user) {
-                  if (window.confirm(
-                    "Disabling local-only storage will sync all your mood entries to your cloud account. Continue?"
-                  )) {
-                    updateSettings({ storeMoodDataLocally: newValue });
-                  }
-                } else {
-                  updateSettings({ storeMoodDataLocally: newValue });
-                }
-              }} 
-              className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
-            />
-          </div>
-          <p className="text-xs text-white/50 mt-1">
-            When enabled, your mood data will only be stored on this device and won&apos;t be synced to the cloud.
-            When disabled, all your mood entries (including those created before signing in) will be synced to your account.
-          </p>
-        </div>
-
         {/* Data Management */}
         <div className="space-y-2 p-3 bg-white/5 rounded-lg">
           <h4 className="text-sm font-medium text-white">Data Management</h4>
           <p className="text-xs text-white/70 mb-3">
-            You currently have {entries.length} mood entries stored. 
-            Use the button below to permanently delete all your mood entries.
+            You currently have {entries.length} mood entries stored.
           </p>
-          <div className="flex justify-center">
-            <button 
-              onClick={clearAllEntries}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center"
-            >
-              <Trash2 size={16} className="mr-2" />
-              Delete All {entries.length} Entries
-            </button>
-          </div>
         </div>
 
         {/* Mood Entries Management */}

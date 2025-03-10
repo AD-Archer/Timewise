@@ -36,7 +36,7 @@ export default function Home() {
   const { entries, addEntry } = useMood();
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements'>('timer');
+  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot'>('timer');
   const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat'>('mood');
   const [showIntro, setShowIntro] = useState(true);
   const [introReady, setIntroReady] = useState(false);
@@ -182,10 +182,10 @@ export default function Home() {
     
     // Listen for custom event to open settings to a specific tab
     const handleOpenSettingsTab = (event: CustomEvent) => {
-      setShowSettings(true);
       if (event.detail && event.detail.tab) {
         setInitialSettingsTab(event.detail.tab);
       }
+      setShowSettings(true);
     };
 
     // Listen for custom event to open auth modal
@@ -216,6 +216,29 @@ export default function Home() {
     localStorage.setItem('hasSeenIntro', 'true');
   }, []);
 
+  // Set the appropriate settings tab based on the active tab
+  const handleOpenSettings = useCallback(() => {
+    // Map the active tab to the corresponding settings tab
+    let settingsTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
+    
+    switch (activeTab) {
+      case 'mood':
+        settingsTab = 'mood';
+        break;
+      case 'timer':
+        settingsTab = 'timer';
+        break;
+      case 'chat':
+        settingsTab = 'chatbot';
+        break;
+      default:
+        settingsTab = 'timer';
+    }
+    
+    setInitialSettingsTab(settingsTab);
+    setShowSettings(true);
+  }, [activeTab]);
+
   return (
     <BackgroundProvider>
       <AnalyticsProvider>
@@ -243,9 +266,9 @@ export default function Home() {
             
             {/* Settings Button */}
             <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
-              <AuthButton onOpenSettings={() => setShowSettings(true)} />
+              <AuthButton onOpenSettings={handleOpenSettings} />
               <button
-                onClick={() => setShowSettings(true)}
+                onClick={handleOpenSettings}
                 className="p-2 bg-black/30 backdrop-blur-md rounded-full hover:bg-black/50 transition-colors"
                 aria-label="Settings"
               >

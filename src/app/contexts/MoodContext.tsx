@@ -20,10 +20,12 @@ interface MoodContextType {
   entries: MoodEntry[];
   tags: string[]; // Available tags
   isLoading: boolean; // Loading state for Firestore operations
+  requiresAuth: boolean; // Whether the user needs to sign in
   addEntry: (mood: number, note: string, tags: string[]) => void;
   updateEntry: (id: string, updates: Partial<Omit<MoodEntry, 'id' | 'date'>>) => void;
   deleteEntry: (id: string) => void;
   clearAllEntries: () => void;
+  resetClearFlag: () => void; // New function to reset the clear flag
   addTag: (tag: string) => void;
   deleteTag: (tag: string) => void;
   getEntriesByDateRange: (startDate: string, endDate: string) => MoodEntry[];
@@ -47,31 +49,41 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { settings } = useSettings();
+  const [requiresAuth, setRequiresAuth] = useState(false);
 
   // Set isClient to true after initial render
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Load entries and tags from localStorage
+  // Check if user is authenticated
+  useEffect(() => {
+    if (isClient) {
+      setRequiresAuth(!user);
+    }
+  }, [user, isClient]);
+
+  // Load entries and tags from Firestore only
   useEffect(() => {
     if (!isClient) return;
     
-    const savedEntries = getLocalStorage<MoodEntry[]>('moodEntries', []);
-    const savedTags = getLocalStorage<string[]>('moodTags', defaultTags);
-    
-    setEntries(savedEntries);
-    setTags(savedTags);
-    setIsLoading(false);
-  }, [isClient]);
-
-  // Save entries and tags to localStorage whenever they change
-  useEffect(() => {
-    if (isClient) {
-      setLocalStorage('moodEntries', entries);
+    // If user is not authenticated, don't load any data
+    if (!user) {
+      setEntries([]);
+      setTags(defaultTags);
+      setIsLoading(false);
+      return;
     }
-  }, [entries, isClient]);
+    
+    // Load tags from localStorage (we'll still keep tags in localStorage for simplicity)
+    const savedTags = getLocalStorage<string[]>('moodTags', defaultTags);
+    setTags(savedTags);
+    
+    // Data will be loaded from Firestore in the loadMoodDataFromFirestore effect
+    
+  }, [isClient, user]);
 
+  // Save tags to localStorage whenever they change
   useEffect(() => {
     if (isClient) {
       setLocalStorage('moodTags', tags);
@@ -81,20 +93,9 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
   // Sync mood data with Firestore when entries change
   useEffect(() => {
     const syncMoodDataWithFirestore = async () => {
-      // Only sync if user is logged in and storeMoodDataLocally is false
-      if (user && settings && settings.storeMoodDataLocally === false) {
+      // Only sync if user is logged in
+      if (user && entries.length > 0) {
         try {
-          // Check if we recently deleted the last entry
-          const lastEntryDeletedTimestamp = getLocalStorage<number>('last-entry-deleted-timestamp', 0);
-          const currentTime = Date.now();
-          const timeSinceLastEntryDeleted = currentTime - lastEntryDeletedTimestamp;
-          
-          // If we deleted the last entry within the last 10 seconds, skip syncing
-          if (lastEntryDeletedTimestamp > 0 && timeSinceLastEntryDeleted < 10000) {
-            console.log(`Skipping Firestore sync because last entry was deleted ${timeSinceLastEntryDeleted}ms ago`);
-            return;
-          }
-          
           console.log('Syncing mood data with Firestore...');
           // Convert MoodEntry format to UserMoodData format
           const firestoreMoodData = {
@@ -120,73 +121,25 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [entries, user, settings]);
-
-  // Sync all local entries to Firestore when user signs in or changes storage preference
-  useEffect(() => {
-    const syncAllLocalEntriesToFirestore = async () => {
-      // Only sync if user is logged in and storeMoodDataLocally is false
-      if (user && settings && settings.storeMoodDataLocally === false && entries.length > 0) {
-        try {
-          // Check if we recently deleted the last entry
-          const lastEntryDeletedTimestamp = getLocalStorage<number>('last-entry-deleted-timestamp', 0);
-          const currentTime = Date.now();
-          const timeSinceLastEntryDeleted = currentTime - lastEntryDeletedTimestamp;
-          
-          // If we deleted the last entry within the last 10 seconds, skip syncing
-          if (lastEntryDeletedTimestamp > 0 && timeSinceLastEntryDeleted < 10000) {
-            console.log(`Skipping full Firestore sync because last entry was deleted ${timeSinceLastEntryDeleted}ms ago`);
-            return;
-          }
-          
-          console.log(`Syncing all ${entries.length} local mood entries to Firestore...`);
-          // Convert all local MoodEntry format to UserMoodData format
-          const firestoreMoodData = {
-            entries: entries.map(entry => ({
-              timestamp: new Date(entry.date).getTime(),
-              mood: entry.mood,
-              notes: entry.note,
-              tags: entry.tags // Include tags in the Firestore data
-            }))
-          };
-          
-          await saveUserMoodData(user.uid, firestoreMoodData);
-          console.log(`Successfully synced all ${entries.length} local mood entries to Firestore`);
-        } catch (error) {
-          console.error('Error syncing all local mood entries to Firestore:', error);
-        }
-      }
-    };
-
-    // Only run this when user or settings change, not on every entries change
-    if (user && settings && settings.storeMoodDataLocally === false) {
-      syncAllLocalEntriesToFirestore();
-    }
-  }, [user, settings, settings?.storeMoodDataLocally, entries]);
+  }, [entries, user]);
 
   // Load mood data from Firestore when user signs in
   useEffect(() => {
     const loadMoodDataFromFirestore = async () => {
-      if (user && settings && settings.storeMoodDataLocally === false) {
+      if (user) {
         try {
           setIsLoading(true);
           console.log('Loading mood data from Firestore...');
           
-          // Check if we recently deleted the last entry
-          const lastEntryDeletedTimestamp = getLocalStorage<number>('last-entry-deleted-timestamp', 0);
-          const currentTime = Date.now();
-          const timeSinceLastEntryDeleted = currentTime - lastEntryDeletedTimestamp;
+          // Check if all entries were cleared
+          const allEntriesClearedTimestamp = getLocalStorage<number>('all-entries-cleared-timestamp', 0);
+          const deletedAllEntries = getLocalStorage<boolean>('deleted-all-entries', false);
           
-          // If we deleted the last entry within the last 10 seconds, skip loading
-          if (lastEntryDeletedTimestamp > 0 && timeSinceLastEntryDeleted < 10000) {
-            console.log(`Skipping Firestore load because last entry was deleted ${timeSinceLastEntryDeleted}ms ago`);
+          // If we have a "all entries cleared" flag, don't load any entries from Firestore
+          if (allEntriesClearedTimestamp > 0 || deletedAllEntries) {
+            console.log('All entries were previously cleared, skipping Firestore load');
             setIsLoading(false);
             return;
-          }
-          
-          // If it's been more than 10 seconds, clear the flag
-          if (lastEntryDeletedTimestamp > 0 && timeSinceLastEntryDeleted >= 10000) {
-            localStorage.removeItem('last-entry-deleted-timestamp');
           }
           
           const userData = await loadUserData(user.uid);
@@ -194,43 +147,10 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
           if (userData && userData.moodData && userData.moodData.entries) {
             console.log(`Found ${userData.moodData.entries.length} mood entries in Firestore`);
             
-            // Create a map of existing entries by timestamp for faster lookup
-            const existingEntriesMap = new Map();
-            entries.forEach(entry => {
-              existingEntriesMap.set(new Date(entry.date).getTime(), true);
-            });
-            
-            // Get all deletion markers from localStorage
-            const allKeys = Object.keys(localStorage);
-            const deletionMarkers = allKeys.filter(key => key.startsWith('deleted-mood-'));
-            const deletedTimestamps = new Set();
-            
-            // Extract timestamps from deletion markers
-            deletionMarkers.forEach(marker => {
-              const parts = marker.split('-');
-              if (parts.length >= 3) {
-                const timestamp = parts[2];
-                if (!isNaN(Number(timestamp))) {
-                  deletedTimestamps.add(Number(timestamp));
-                }
-              }
-            });
-            
-            console.log(`Found ${deletedTimestamps.size} deletion markers`);
-            
             const newEntries: MoodEntry[] = [];
             
             userData.moodData.entries.forEach(entry => {
               if (!entry || !entry.timestamp) return;
-              
-              // Skip if this entry already exists locally
-              if (existingEntriesMap.has(entry.timestamp)) return;
-              
-              // Skip if this entry has been deleted
-              if (deletedTimestamps.has(entry.timestamp)) {
-                console.log(`Skipping previously deleted entry with timestamp ${entry.timestamp}`);
-                return;
-              }
               
               // Convert Firestore entry to MoodEntry format
               const newEntry: MoodEntry = {
@@ -245,16 +165,21 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
             });
             
             if (newEntries.length > 0) {
-              console.log(`Adding ${newEntries.length} new entries from Firestore`);
-              setEntries(prev => [...prev, ...newEntries]);
+              console.log(`Adding ${newEntries.length} entries from Firestore`);
+              
+              // Use removeDuplicateEntries to ensure no duplicates
+              setEntries(removeDuplicateEntries(newEntries));
             } else {
-              console.log('No new entries to add from Firestore');
+              console.log('No entries found in Firestore');
+              setEntries([]);
             }
           } else {
             console.log('No mood data found in Firestore');
+            setEntries([]);
           }
         } catch (error) {
           console.error('Error loading mood data from Firestore:', error);
+          setEntries([]);
         } finally {
           setIsLoading(false);
         }
@@ -262,60 +187,57 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
     };
     
     loadMoodDataFromFirestore();
-  }, [user, settings?.storeMoodDataLocally, entries, settings]);
+  }, [user]);
 
-  // Cleanup old deletion markers (run once a day)
-  useEffect(() => {
-    if (!isClient) return;
+  // Helper function to remove duplicate entries
+  const removeDuplicateEntries = (entries: MoodEntry[]): MoodEntry[] => {
+    // Use a Map to track entries by timestamp
+    const entriesByTimestamp = new Map<number, MoodEntry>();
     
-    const cleanupDeletionMarkers = () => {
-      try {
-        // Get all deletion markers from localStorage
-        const allKeys = Object.keys(localStorage);
-        const deletionMarkers = allKeys.filter(key => key.startsWith('deleted-mood-'));
-        
-        if (deletionMarkers.length > 100) {
-          console.log(`Cleaning up ${deletionMarkers.length - 50} old deletion markers`);
-          
-          // Sort by timestamp (newest first)
-          deletionMarkers.sort((a, b) => {
-            const timestampA = Number(a.split('-')[2]);
-            const timestampB = Number(b.split('-')[2]);
-            return timestampB - timestampA;
-          });
-          
-          // Keep only the 50 most recent markers
-          const markersToRemove = deletionMarkers.slice(50);
-          
-          // Remove old markers
-          markersToRemove.forEach(marker => {
-            localStorage.removeItem(marker);
-          });
-          
-          console.log(`Removed ${markersToRemove.length} old deletion markers`);
-        }
-      } catch (error) {
-        console.error('Error cleaning up deletion markers:', error);
+    // Process entries in reverse order (newest first)
+    // This ensures we keep the newest entry when duplicates exist
+    [...entries].reverse().forEach(entry => {
+      const timestamp = new Date(entry.date).getTime();
+      
+      // Only add this entry if we haven't seen this timestamp yet
+      if (!entriesByTimestamp.has(timestamp)) {
+        entriesByTimestamp.set(timestamp, entry);
       }
-    };
+    });
     
-    // Run cleanup on initial load
-    cleanupDeletionMarkers();
-    
-    // Set up interval to run cleanup once a day
-    const intervalId = setInterval(cleanupDeletionMarkers, 24 * 60 * 60 * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [isClient]);
+    // Convert back to array and sort by date (oldest first)
+    return Array.from(entriesByTimestamp.values())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
 
   // Add a new mood entry
   const addEntry = (mood: number, note: string, tags: string[] = []) => {
+    if (!user) {
+      alert('You need to sign in to track your mood');
+      return;
+    }
+    
     try {
+      // Generate a timestamp for the new entry
+      const timestamp = Date.now();
+      
+      // Check if an entry with this timestamp already exists
+      const entryExists = entries.some(entry => {
+        const entryTimestamp = new Date(entry.date).getTime();
+        // Allow 1 second tolerance for timestamp comparison
+        return Math.abs(entryTimestamp - timestamp) < 1000;
+      });
+      
+      if (entryExists) {
+        console.log('Prevented duplicate entry - an entry with this timestamp already exists');
+        return;
+      }
+      
       // Generate a random string to ensure uniqueness
       const randomStr = Math.random().toString(36).substring(2, 8);
       const newEntry: MoodEntry = {
-        id: `mood-${Date.now()}-${randomStr}`, // Generate a unique ID with timestamp and random string
-        date: new Date().toISOString(),
+        id: `mood-${timestamp}-${randomStr}`, // Generate a unique ID with timestamp and random string
+        date: new Date(timestamp).toISOString(),
         mood,
         note,
         tags,
@@ -329,6 +251,11 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
 
   // Update an existing entry
   const updateEntry = (id: string, updates: Partial<Omit<MoodEntry, 'id' | 'date'>>) => {
+    if (!user) {
+      alert('You need to sign in to update mood entries');
+      return;
+    }
+    
     setEntries(prev => 
       prev.map(entry => 
         entry.id === id 
@@ -340,128 +267,73 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
 
   // Delete an entry
   const deleteEntry = (id: string) => {
+    if (!user) {
+      alert('You need to sign in to delete mood entries');
+      return;
+    }
+    
     try {
       console.log(`Deleting mood entry with ID: ${id}`);
       
-      // Get the entry being deleted for potential Firestore sync
-      const entryToDelete = entries.find(entry => entry.id === id);
-      
-      // Check if this is the last entry
-      const isLastEntry = entries.length === 1;
-      
-      // Remove from local state
+      // Remove from state
       setEntries(prev => {
         const filtered = prev.filter(entry => entry.id !== id);
         console.log(`Removed entry from state. Entries count before: ${prev.length}, after: ${filtered.length}`);
         return filtered;
       });
-      
-      // If user is logged in and not storing locally, sync deletion with Firestore
-      if (user && settings && settings.storeMoodDataLocally === false && entryToDelete) {
-        const entryTimestamp = new Date(entryToDelete.date).getTime();
-        const deletionMarker = `deleted-mood-${entryTimestamp}`;
-        setLocalStorage(deletionMarker, true);
-        
-        // Special handling for last entry
-        if (isLastEntry) {
-          console.log('Last entry deleted - ensuring complete Firestore reset');
-          
-          // For the last entry, completely reset Firestore data to prevent any sync issues
-          setTimeout(async () => {
-            try {
-              // Use empty entries array to completely reset
-              const emptyMoodData = { entries: [] };
-              await saveUserMoodData(user.uid, emptyMoodData);
-              console.log('Successfully reset Firestore data after deleting last entry');
-              
-              // Set a special flag to prevent auto-reloading data
-              setLocalStorage('last-entry-deleted-timestamp', Date.now());
-            } catch (error) {
-              console.error('Error resetting Firestore data after deleting last entry:', error);
-            }
-          }, 500);
-        } else {
-          // Normal deletion for non-last entries
-          setTimeout(async () => {
-            try {
-              // Get current Firestore data
-              const userData = await loadUserData(user.uid);
-              
-              if (userData && userData.moodData && userData.moodData.entries) {
-                // Filter out the deleted entry by matching timestamp
-                const updatedEntries = userData.moodData.entries.filter(
-                  entry => entry.timestamp !== entryTimestamp
-                );
-                
-                // Save the updated entries back to Firestore
-                await saveUserMoodData(user.uid, { entries: updatedEntries });
-                console.log(`Successfully synced deletion to Firestore. Removed entry with timestamp ${entryTimestamp}`);
-              }
-            } catch (error) {
-              console.error('Error syncing deletion with Firestore:', error);
-            }
-          }, 500);
-        }
-      }
     } catch (error) {
       console.error('Error deleting mood entry:', error);
     }
   };
 
-  // Clear all entries - completely rewritten for reliability
+  // Clear all entries
   const clearAllEntries = () => {
+    if (!user) {
+      alert('You need to sign in to clear mood entries');
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to delete ALL mood entries? This cannot be undone and will remove thousands of entries.')) {
       try {
-        // Make a copy of all entries before clearing them
-        const allEntries = [...entries];
-        
-        // 1. Clear entries from state immediately
+        // Clear entries from state immediately
         setEntries([]);
         
-        // 2. Clear entries from localStorage immediately
-        setLocalStorage('moodEntries', []);
-        console.log('Cleared all mood entries from localStorage');
+        // Set flags to prevent reloading
+        setLocalStorage('all-entries-cleared-timestamp', Date.now());
+        setLocalStorage('deleted-all-entries', true);
         
-        // 3. Set the last-entry-deleted flag to prevent immediate reloading
-        setLocalStorage('last-entry-deleted-timestamp', Date.now());
-        console.log('Set last-entry-deleted flag to prevent immediate reloading');
-        
-        // 4. Create deletion markers for all entries to prevent them from being re-added
-        if (allEntries.length > 0) {
-          console.log(`Creating deletion markers for ${allEntries.length} entries`);
-          allEntries.forEach(entry => {
-            const entryTimestamp = new Date(entry.date).getTime();
-            const deletionMarker = `deleted-mood-${entryTimestamp}`;
-            setLocalStorage(deletionMarker, true);
+        // Reset Firestore data
+        resetUserMoodData(user.uid)
+          .then(() => {
+            console.log('Successfully reset all mood entries in Firestore database');
+            alert('Successfully cleared all mood entries from the database');
+            
+            // Force a page reload to ensure everything is cleared
+            window.location.reload();
+          })
+          .catch(error => {
+            console.error('Failed to clear mood entries from Firestore:', error);
+            alert('Error clearing entries from database. Please try again or contact support.');
           });
-        }
-        
-        // 5. If user is logged in, clear from Firestore directly
-        if (user) {
-          // Use the specialized function to completely reset mood data
-          resetUserMoodData(user.uid)
-            .then(() => {
-              console.log('Successfully reset all mood entries in Firestore database');
-              // Show confirmation alert after successful database clear
-              alert('Successfully cleared all mood entries from the database');
-            })
-            .catch(error => {
-              console.error('Failed to clear mood entries from Firestore:', error);
-              alert('Error clearing entries from database. Please try again or contact support.');
-              
-              // Fallback to the old method if the reset fails
-              const emptyMoodData = { entries: [] };
-              return saveUserMoodData(user.uid, emptyMoodData);
-            });
-        } else {
-          // If not using Firestore, show confirmation immediately
-          alert('Successfully cleared all mood entries');
-        }
       } catch (error) {
         console.error('Error in clearAllEntries:', error);
         alert('An error occurred while clearing entries. Please try again.');
       }
     }
+  };
+
+  // Reset the "all entries cleared" flag
+  const resetClearFlag = () => {
+    if (!user) {
+      alert('You need to sign in to reset mood tracking');
+      return;
+    }
+    
+    setLocalStorage('all-entries-cleared-timestamp', 0);
+    setLocalStorage('deleted-all-entries', false);
+    setEntries([]);
+    setTags(defaultTags);
+    console.log('All entries cleared flag reset');
   };
 
   // Add a new tag
@@ -506,10 +378,12 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
         entries, 
         tags,
         isLoading,
+        requiresAuth,
         addEntry, 
         updateEntry, 
         deleteEntry,
         clearAllEntries,
+        resetClearFlag,
         addTag,
         deleteTag,
         getEntriesByDateRange,
