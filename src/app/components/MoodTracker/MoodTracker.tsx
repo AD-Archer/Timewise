@@ -21,14 +21,14 @@ import {
 import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X, Loader2 } from 'lucide-react';
 
 const MoodTracker = () => {
-  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood, isLoading } = useMood();
+  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood, isLoading, requiresAuth } = useMood();
   const { settings, updateSettings } = useSettings();
   const [currentMood, setCurrentMood] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [showAddTag, setShowAddTag] = useState(false);
-  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(settings.moodChartTimeframe || 'week');
+  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(settings?.moodChartTimeframe || 'week');
   const [averageMood, setAverageMood] = useState<number | null>(null);
   
   interface ChartDataPoint {
@@ -179,6 +179,22 @@ const MoodTracker = () => {
     <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl w-full max-w-4xl">
       <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 text-center">Mood Tracker</h1>
       
+      {requiresAuth && (
+        <div className="mb-6 p-4 bg-pink-600/30 border border-pink-500 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="mt-1">
+              <AlertCircle size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold text-lg">Sign in required</h3>
+              <p className="text-white/90">
+                You need to sign in to use the Mood Tracker. Your mood data will be securely stored in your account.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {isLoading && (
         <div className="flex justify-center items-center mb-4">
           <Loader2 className="animate-spin text-white mr-2" size={24} />
@@ -207,8 +223,9 @@ const MoodTracker = () => {
                     currentMood === mood 
                       ? 'bg-pink-600 scale-110' 
                       : 'bg-white/20 hover:bg-white/30'
-                  }`}
+                  } ${requiresAuth ? 'opacity-50 cursor-not-allowed' : ''}`}
                   aria-label={`Mood level ${mood}`}
+                  disabled={requiresAuth}
                 >
                   {renderMoodIcon(mood, 32)}
                 </button>
@@ -224,8 +241,9 @@ const MoodTracker = () => {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="How are you feeling?"
-              className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className={`w-full p-3 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-500 ${requiresAuth ? 'opacity-50 cursor-not-allowed' : ''}`}
               rows={2}
+              disabled={requiresAuth}
             />
           </div>
           
@@ -242,7 +260,8 @@ const MoodTracker = () => {
                     selectedTags.includes(tag)
                       ? 'bg-pink-600 text-white'
                       : 'bg-white/20 text-white/80 hover:bg-white/30'
-                  }`}
+                  } ${requiresAuth ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={requiresAuth}
                 >
                   {tag}
                 </button>
@@ -252,7 +271,8 @@ const MoodTracker = () => {
               <button
                 type="button"
                 onClick={() => setShowAddTag(true)}
-                className="px-3 py-1 rounded-full text-sm bg-white/10 text-white/80 hover:bg-white/20 flex items-center gap-1"
+                className={`px-3 py-1 rounded-full text-sm bg-white/10 text-white/80 hover:bg-white/20 flex items-center gap-1 ${requiresAuth ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={requiresAuth}
               >
                 <Plus size={14} />
                 <span>Add</span>
@@ -267,12 +287,14 @@ const MoodTracker = () => {
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Enter new emotion"
-                  className="flex-1 p-2 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  className={`flex-1 p-2 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-500 ${requiresAuth ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={requiresAuth}
                 />
                 <button
                   type="button"
                   onClick={handleAddTag}
-                  className="px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700"
+                  className={`px-3 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 ${requiresAuth ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={requiresAuth}
                 >
                   Add
                 </button>
@@ -283,6 +305,7 @@ const MoodTracker = () => {
                     setNewTag('');
                   }}
                   className="p-2 text-white/60 hover:text-white"
+                  disabled={requiresAuth}
                 >
                   <X size={18} />
                 </button>
@@ -293,10 +316,10 @@ const MoodTracker = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={currentMood === null}
+            disabled={currentMood === null || requiresAuth}
             className="w-full py-3 bg-pink-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-700 transition-colors"
           >
-            Save Mood
+            {requiresAuth ? 'Sign in to Save Mood' : 'Save Mood'}
           </button>
         </form>
       </div>

@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Clock, BarChart2, MessageCircle } from 'lucide-react';
+import { Clock, BarChart2, MessageCircle, Flower } from 'lucide-react';
 
 interface TabNavigationProps {
-  activeTab: 'mood' | 'timer' | 'chat';
-  onTabChange: (tab: 'mood' | 'timer' | 'chat') => void;
+  activeTab: 'mood' | 'timer' | 'chat' | 'meditation';
+  onTabChange: (tab: 'mood' | 'timer' | 'chat' | 'meditation') => void;
 }
 
 const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
@@ -34,6 +34,18 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
         >
           <Clock size={20} />
           <span className="hidden md:inline">Timer</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange('meditation')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+            activeTab === 'meditation'
+              ? 'bg-pink-600 text-white'
+              : 'text-white/70 hover:text-white'
+          }`}
+        >
+          <Flower size={20} />
+          <span className="hidden md:inline">Meditation</span>
         </button>
 
         <button

@@ -33,7 +33,8 @@ export function useSound(soundUrl: string) {
   useEffect(() => {
     // Update the audio volume whenever the soundVolume in settings changes
     if (audioRef.current) {
-      audioRef.current.volume = settings.soundVolume;
+      // Convert the volume from percentage (0-100) to the valid range (0-1)
+      audioRef.current.volume = settings.soundVolume / 100;
     }
   }, [settings.soundVolume]); // Re-run effect if soundVolume changes
 

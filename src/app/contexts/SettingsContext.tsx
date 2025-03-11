@@ -57,6 +57,14 @@ export interface Settings {
   chatbotModel?: 'gpt-3.5-turbo' | 'gpt-4';
   customOpenAIKey?: string;
   chatExportEnabled?: boolean;
+  // Meditation settings
+  meditationSessionHistory?: {
+    type: string;
+    duration: number;
+    date: string;
+  }[];
+  favoriteSessionTypes?: string[];
+  defaultMeditationDuration?: number;
 }
 
 // Chat history interface - not stored in Firestore, only in memory
@@ -93,20 +101,22 @@ const defaultPlaylist: PlaylistInfo = {
 
 const defaultSettings: Settings = {
   durations: {
-    pomodoro: 25 * 60,
-    shortBreak: 5 * 60,
-    longBreak: 10 * 60,
+    pomodoro: 25 * 60, // 25 minutes in seconds
+    shortBreak: 5 * 60, // 5 minutes in seconds
+    longBreak: 10 * 60, // 10 minutes in seconds
   },
   pomodoroCount: 0,
   targetPomodoros: 4,
   autoStartBreaks: true,
   autoStartPomodoros: true,
-  playlists: [defaultPlaylist],
-  currentPlaylistId: defaultPlaylist.id,
+  playlists: [],
+  currentPlaylistId: null,
   // Default to Spotify player
   preferredMusicService: 'spotify',
   soundEnabled: true,
-  soundVolume: 0.5,
+  soundVolume: 50,
+  pomodoroChartTimeframe: 'week',
+  moodChartTimeframe: 'week',
   // Default mood tracker settings
   moodTrackingEnabled: true,
   moodTrackingFrequency: 'endOfSession',
@@ -120,6 +130,10 @@ const defaultSettings: Settings = {
   chatbotModel: 'gpt-3.5-turbo',
   customOpenAIKey: '',
   chatExportEnabled: true,
+  // Meditation settings
+  meditationSessionHistory: [],
+  favoriteSessionTypes: ['breathing'],
+  defaultMeditationDuration: 5,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

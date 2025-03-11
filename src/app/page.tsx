@@ -16,6 +16,7 @@ import TimeDisplay from "./components/Clock";
 import IntroAnimation from "./components/IntroAnimation";
 import TimerPresets from "./components/Timer/TimerPresets";
 import ChatBot from "./components/ChatBot/ChatBot";
+import Meditation from "./components/Meditation/Meditation";
 import AuthButton from "./components/Auth/AuthButton";
 import { useAuth } from "./contexts/AuthContext";
 import { useSettings, PlaylistInfo, Settings } from "./contexts/SettingsContext";
@@ -36,8 +37,8 @@ export default function Home() {
   const { entries, addEntry } = useMood();
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements'>('timer');
-  const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat'>('mood');
+  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot' | 'meditation'>('timer');
+  const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat' | 'meditation'>('mood');
   const [showIntro, setShowIntro] = useState(true);
   const [introReady, setIntroReady] = useState(false);
 
@@ -182,10 +183,10 @@ export default function Home() {
     
     // Listen for custom event to open settings to a specific tab
     const handleOpenSettingsTab = (event: CustomEvent) => {
-      setShowSettings(true);
       if (event.detail && event.detail.tab) {
         setInitialSettingsTab(event.detail.tab);
       }
+      setShowSettings(true);
     };
 
     // Listen for custom event to open auth modal
@@ -216,6 +217,32 @@ export default function Home() {
     localStorage.setItem('hasSeenIntro', 'true');
   }, []);
 
+  // Set the appropriate settings tab based on the active tab
+  const handleOpenSettings = useCallback(() => {
+    // Map the active tab to the corresponding settings tab
+    let settingsTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements' | 'meditation';
+    
+    switch (activeTab) {
+      case 'mood':
+        settingsTab = 'mood';
+        break;
+      case 'timer':
+        settingsTab = 'timer';
+        break;
+      case 'chat':
+        settingsTab = 'chatbot';
+        break;
+      case 'meditation':
+        settingsTab = 'meditation';
+        break;
+      default:
+        settingsTab = 'timer';
+    }
+    
+    setInitialSettingsTab(settingsTab);
+    setShowSettings(true);
+  }, [activeTab]);
+
   return (
     <BackgroundProvider>
       <AnalyticsProvider>
@@ -243,9 +270,9 @@ export default function Home() {
             
             {/* Settings Button */}
             <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
-              <AuthButton onOpenSettings={() => setShowSettings(true)} />
+              <AuthButton onOpenSettings={handleOpenSettings} />
               <button
-                onClick={() => setShowSettings(true)}
+                onClick={handleOpenSettings}
                 className="p-2 bg-black/30 backdrop-blur-md rounded-full hover:bg-black/50 transition-colors"
                 aria-label="Settings"
               >
@@ -285,6 +312,8 @@ export default function Home() {
                 )}
                 
                 {activeTab === 'mood' && <MoodTracker />}
+                
+                {activeTab === 'meditation' && <Meditation />}
                 
                 {activeTab === 'chat' && <ChatBot />}
               </div>
