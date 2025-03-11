@@ -21,7 +21,7 @@ import {
 import { Smile, Frown, Meh, AlertCircle, Heart, Plus, X, Loader2 } from 'lucide-react';
 
 const MoodTracker = () => {
-  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood, isLoading, resetClearFlag, requiresAuth } = useMood();
+  const { entries, tags, addEntry, addTag, getEntriesByDateRange, getAverageMood, isLoading, requiresAuth } = useMood();
   const { settings, updateSettings } = useSettings();
   const [currentMood, setCurrentMood] = useState<number | null>(null);
   const [note, setNote] = useState('');

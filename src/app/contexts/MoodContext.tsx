@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 import { saveUserMoodData, resetUserMoodData, loadUserData } from '../services/userDataService';
 import { useAuth } from './AuthContext';
-import { useSettings } from './SettingsContext';
 
 // Define the mood entry interface
 export interface MoodEntry {
@@ -48,7 +47,6 @@ export function MoodProvider({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { settings } = useSettings();
   const [requiresAuth, setRequiresAuth] = useState(false);
 
   // Set isClient to true after initial render

@@ -16,6 +16,7 @@ import TimeDisplay from "./components/Clock";
 import IntroAnimation from "./components/IntroAnimation";
 import TimerPresets from "./components/Timer/TimerPresets";
 import ChatBot from "./components/ChatBot/ChatBot";
+import Meditation from "./components/Meditation/Meditation";
 import AuthButton from "./components/Auth/AuthButton";
 import { useAuth } from "./contexts/AuthContext";
 import { useSettings, PlaylistInfo, Settings } from "./contexts/SettingsContext";
@@ -36,8 +37,8 @@ export default function Home() {
   const { entries, addEntry } = useMood();
   const [showWarning, setShowWarning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot'>('timer');
-  const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat'>('mood');
+  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot' | 'meditation'>('timer');
+  const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat' | 'meditation'>('mood');
   const [showIntro, setShowIntro] = useState(true);
   const [introReady, setIntroReady] = useState(false);
 
@@ -219,7 +220,7 @@ export default function Home() {
   // Set the appropriate settings tab based on the active tab
   const handleOpenSettings = useCallback(() => {
     // Map the active tab to the corresponding settings tab
-    let settingsTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
+    let settingsTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements' | 'meditation';
     
     switch (activeTab) {
       case 'mood':
@@ -230,6 +231,9 @@ export default function Home() {
         break;
       case 'chat':
         settingsTab = 'chatbot';
+        break;
+      case 'meditation':
+        settingsTab = 'meditation';
         break;
       default:
         settingsTab = 'timer';
@@ -308,6 +312,8 @@ export default function Home() {
                 )}
                 
                 {activeTab === 'mood' && <MoodTracker />}
+                
+                {activeTab === 'meditation' && <Meditation />}
                 
                 {activeTab === 'chat' && <ChatBot />}
               </div>

@@ -5,16 +5,15 @@ import { useBackground } from '../../contexts/BackgroundContext';
 import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
 import { useMood } from '../../contexts/MoodContext';
-import { useAuth } from '../../contexts/AuthContext';
-import type { PlaylistInfo } from '../../contexts/SettingsContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
 import Achievements from '../Analytics/Achievements'; 
 import AnalyticsDisplay from '../Analytics/AnalyticsDisplay';
+import MeditationSettings from './MeditationSettings';
 import { format } from 'date-fns';
 
 interface SettingsProps {
-  currentTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements';
+  currentTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements' | 'meditation';
 }
 
 const Settings = ({ currentTab }: SettingsProps) => {
@@ -31,7 +30,6 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const { analytics, resetAnalytics } = useAnalytics();
   const { resetAchievements } = useAchievements();
   const { entries, deleteEntry, tags, clearAllEntries } = useMood();
-  const { user } = useAuth();
   const [pomodoro, setPomodoro] = useState(Math.floor(settings.durations.pomodoro / 60));
   const [shortBreak, setShortBreak] = useState(Math.floor(settings.durations.shortBreak / 60));
   const [longBreak, setLongBreak] = useState(Math.floor(settings.durations.longBreak / 60));
@@ -85,7 +83,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
       return;
     }
 
-    const newPlaylist: PlaylistInfo = {
+    const newPlaylist = {
       id: playlistId,
       name: newPlaylistName || 'Untitled Playlist',
       url: newPlaylistUrl,
@@ -868,6 +866,10 @@ const Settings = ({ currentTab }: SettingsProps) => {
         <Achievements />
       </div>
     );
+  }
+
+  if (currentTab === 'meditation') {
+    return <MeditationSettings />;
   }
 
   return null;
