@@ -2,16 +2,18 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePage } from '../../contexts/PageContext';
 import { LogOut, User, Settings } from 'lucide-react';
 import Image from 'next/image';
+
+interface UserProfileProps {
+  onOpenSettings: (tab?: "background" | "analytics" | "achievements" | "mood" | "timer" | "meditation" | "music" | "chatbot") => void;
+}
 
 /**
  * User profile component with dropdown menu
  */
-const UserProfile: React.FC = () => {
+const UserProfile: React.FC<UserProfileProps> = ({ onOpenSettings }) => {
   const { user, signOut } = useAuth();
-  const { openSettings } = usePage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -84,7 +86,7 @@ const UserProfile: React.FC = () => {
           <div className="p-2">
             <button
               onClick={() => {
-                openSettings();
+                onOpenSettings();
                 setIsMenuOpen(false);
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-white/10 rounded-lg transition-colors"

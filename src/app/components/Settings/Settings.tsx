@@ -7,8 +7,8 @@ import { useAchievements } from '../../contexts/AchievementsContext';
 import { useMood } from '../../contexts/MoodContext';
 import Image from 'next/image';
 import { Target, Clock, Flame, Award, Trash2 } from 'lucide-react';
-import Achievements from '../Analytics/Achievements'; 
-import AnalyticsDisplay from '../Analytics/AnalyticsDisplay';
+import Achievements from '../analytics/Achievements'; 
+import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
 import MeditationSettings from './MeditationSettings';
 import { format } from 'date-fns';
 
