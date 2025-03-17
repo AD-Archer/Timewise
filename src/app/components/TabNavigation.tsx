@@ -2,18 +2,19 @@
 
 import React from 'react';
 import { Clock, BarChart2, MessageCircle, Flower } from 'lucide-react';
+import { usePage } from '../contexts/PageContext';
 
-interface TabNavigationProps {
-  activeTab: 'mood' | 'timer' | 'chat' | 'meditation';
-  onTabChange: (tab: 'mood' | 'timer' | 'chat' | 'meditation') => void;
-}
+/**
+ * Navigation tabs for switching between app features
+ */
+const TabNavigation: React.FC = () => {
+  const { activeTab, setActiveTab } = usePage();
 
-const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20">
       <div className="backdrop-blur-md bg-black/30 rounded-full p-1 flex shadow-lg">
         <button
-          onClick={() => onTabChange('mood')}
+          onClick={() => setActiveTab('mood')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
             activeTab === 'mood'
               ? 'bg-pink-600 text-white'
@@ -25,7 +26,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
         </button>
         
         <button
-          onClick={() => onTabChange('timer')}
+          onClick={() => setActiveTab('timer')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
             activeTab === 'timer'
               ? 'bg-pink-600 text-white'
@@ -37,7 +38,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
         </button>
 
         <button
-          onClick={() => onTabChange('meditation')}
+          onClick={() => setActiveTab('meditation')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
             activeTab === 'meditation'
               ? 'bg-pink-600 text-white'
@@ -49,7 +50,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
         </button>
 
         <button
-          onClick={() => onTabChange('chat')}
+          onClick={() => setActiveTab('chat')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
             activeTab === 'chat'
               ? 'bg-pink-600 text-white'

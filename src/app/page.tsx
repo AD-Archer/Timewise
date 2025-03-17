@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import Timer from "./components/Timer/Timer";
 import MoodTracker from "./components/MoodTracker/MoodTracker";
 import TabNavigation from "./components/TabNavigation";
@@ -12,6 +12,7 @@ import SpotifyPlayer from "./components/Music/SpotifyPlayer";
 import { BackgroundProvider } from "./contexts/BackgroundContext";
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { MusicProvider } from './contexts/MusicContext';
+import { PageProvider, usePage } from './contexts/PageContext';
 import TimeDisplay from "./components/Clock";
 import IntroAnimation from "./components/IntroAnimation";
 import TimerPresets from "./components/Timer/TimerPresets";
@@ -19,7 +20,7 @@ import ChatBot from "./components/ChatBot/ChatBot";
 import Meditation from "./components/Meditation/Meditation";
 import AuthButton from "./components/Auth/AuthButton";
 import { useAuth } from "./contexts/AuthContext";
-import { useSettings, PlaylistInfo, Settings } from "./contexts/SettingsContext";
+import { useSettings } from "./contexts/SettingsContext";
 import { saveUserSettings, loadUserData } from "./services/userDataService";
 import type { UserSettings } from "./services/userDataService";
 import { useMood } from "./contexts/MoodContext";
@@ -31,16 +32,24 @@ interface Playlist {
   videos: string[];
 }
 
-export default function Home() {
+/**
+ * Main content component that uses the PageContext
+ */
+function MainContent() {
   const { user } = useAuth();
   const { settings, updateSettings } = useSettings();
   const { entries, addEntry } = useMood();
-  const [showWarning, setShowWarning] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [initialSettingsTab, setInitialSettingsTab] = useState<'timer' | 'background' | 'music' | 'analytics' | 'achievements' | 'mood' | 'chatbot' | 'meditation'>('timer');
-  const [activeTab, setActiveTab] = useState<'mood' | 'timer' | 'chat' | 'meditation'>('mood');
-  const [showIntro, setShowIntro] = useState(true);
-  const [introReady, setIntroReady] = useState(false);
+  const { 
+    activeTab, 
+    showSettings, 
+    initialSettingsTab, 
+    openSettings, 
+    closeSettings,
+    showIntro,
+    introReady,
+    handleIntroComplete,
+    showWarning
+  } = usePage();
 
   // Load user data from Firestore when user logs in
   useEffect(() => {
@@ -67,10 +76,10 @@ export default function Home() {
                 videos: playlist.videos || []
               }));
               
-              compatibleSettings.playlists = convertedPlaylists as PlaylistInfo[];
+              compatibleSettings.playlists = convertedPlaylists as any;
             }
             
-            updateSettings(compatibleSettings as Partial<Settings>);
+            updateSettings(compatibleSettings as any);
           }
           
           // Load mood data if it exists and storeMoodDataLocally is false
@@ -162,169 +171,99 @@ export default function Home() {
     }
   }, [user, settings]);
 
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setShowWarning(window.innerWidth < 300);
-    };
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-between relative overflow-hidden">
+      {/* Background */}
+      <BackgroundImage />
+      
+      {/* Intro Animation */}
+      {showIntro && introReady && (
+        <IntroAnimation onComplete={handleIntroComplete} />
+      )}
+      
+      {/* Warning for small screens */}
+      {showWarning && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-gray-900 p-6 rounded-lg max-w-sm text-center">
+            <h2 className="text-xl font-bold text-white mb-2">Screen Too Small</h2>
+            <p className="text-gray-300 mb-4">
+              Your screen is too small to display this app properly. Please use a device with a larger screen.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Settings Button */}
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+        <AuthButton />
+        <button
+          onClick={() => openSettings()}
+          className="p-2 bg-black/30 backdrop-blur-md rounded-full hover:bg-black/50 transition-colors"
+          aria-label="Settings"
+        >
+          <SettingsIcon className="w-6 h-6 text-white" />
+        </button>
+      </div>
+      
+      {/* Settings Popup */}
+      {showSettings && (
+        <SettingsPopup isOpen={showSettings} onClose={closeSettings} initialTab={initialSettingsTab} />
+      )}
+      
+      {/* Desktop Clock (visible on medium and larger screens) */}
+      <div className="fixed top-4 left-4 z-40 hidden md:block">
+        <TimeDisplay size="medium" showSeconds={true} />
+      </div>
+      
+      {/* Mobile Clock (visible on small screens) */}
+      <div className="fixed top-4 left-4 z-40 md:hidden">
+        <TimeDisplay size="small" showSeconds={false} />
+      </div>
+      
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-screen">
+        {/* Tab Navigation */}
+        <div className="w-full max-w-4xl mb-6">
+          <TabNavigation />
+        </div>
+        
+        {/* Tab Content */}
+        <div className="w-full max-w-4xl">
+          {activeTab === 'timer' && (
+            <div className="space-y-6">
+              <Timer />
+              <TimerPresets />
+            </div>
+          )}
+          
+          {activeTab === 'mood' && <MoodTracker />}
+          
+          {activeTab === 'meditation' && <Meditation />}
+          
+          {activeTab === 'chat' && <ChatBot />}
+        </div>
+      </div>
+      
+      {/* Music Players */}
+      <div className="fixed bottom-4 left-4 z-40">
+        <SpotifyPlayer />
+        <YouTubePlayer />
+      </div>
+    </main>
+  );
+}
 
-    // Check if intro has been shown in this session
-    const hasSeenIntro = localStorage.getItem('hasSeenIntro');
-    if (hasSeenIntro) {
-      setShowIntro(false);
-    } else {
-      // Set intro as ready after a small delay to ensure smooth loading
-      setTimeout(() => {
-        setIntroReady(true);
-      }, 100);
-    }
-
-    checkScreenSize();
-    window.addEventListener("resize", checkScreenSize);
-    
-    // Listen for custom event to open settings to a specific tab
-    const handleOpenSettingsTab = (event: CustomEvent) => {
-      if (event.detail && event.detail.tab) {
-        setInitialSettingsTab(event.detail.tab);
-      }
-      setShowSettings(true);
-    };
-
-    // Listen for custom event to open auth modal
-    const handleOpenAuthModal = () => {
-      // This will be handled by the AuthButton component
-      window.dispatchEvent(new CustomEvent('openAuthModal'));
-    };
-
-    window.addEventListener("openSettingsTab", handleOpenSettingsTab as EventListener);
-    window.addEventListener("openAuthModal", handleOpenAuthModal as EventListener);
-    
-    return () => {
-      window.removeEventListener("resize", checkScreenSize);
-      window.removeEventListener("openSettingsTab", handleOpenSettingsTab as EventListener);
-      window.removeEventListener("openAuthModal", handleOpenAuthModal as EventListener);
-    };
-  }, []);
-
-  // Notify when settings popup is closed
-  const handleCloseSettings = useCallback(() => {
-    setShowSettings(false);
-    window.dispatchEvent(new Event('settingsPopupClosed'));
-  }, []);
-
-  // Handle intro animation completion
-  const handleIntroComplete = useCallback(() => {
-    setShowIntro(false);
-    localStorage.setItem('hasSeenIntro', 'true');
-  }, []);
-
-  // Set the appropriate settings tab based on the active tab
-  const handleOpenSettings = useCallback(() => {
-    // Map the active tab to the corresponding settings tab
-    let settingsTab: 'mood' | 'timer' | 'chatbot' | 'background' | 'music' | 'analytics' | 'achievements' | 'meditation';
-    
-    switch (activeTab) {
-      case 'mood':
-        settingsTab = 'mood';
-        break;
-      case 'timer':
-        settingsTab = 'timer';
-        break;
-      case 'chat':
-        settingsTab = 'chatbot';
-        break;
-      case 'meditation':
-        settingsTab = 'meditation';
-        break;
-      default:
-        settingsTab = 'timer';
-    }
-    
-    setInitialSettingsTab(settingsTab);
-    setShowSettings(true);
-  }, [activeTab]);
-
+/**
+ * Main app component that provides all contexts
+ */
+export default function Home() {
   return (
     <BackgroundProvider>
       <AnalyticsProvider>
         <MusicProvider>
-          <main className="flex min-h-screen flex-col items-center justify-between relative overflow-hidden">
-            {/* Background */}
-            <BackgroundImage />
-            
-            {/* Intro Animation */}
-            {showIntro && introReady && (
-              <IntroAnimation onComplete={handleIntroComplete} />
-            )}
-            
-            {/* Warning for small screens */}
-            {showWarning && (
-              <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-                <div className="bg-gray-900 p-6 rounded-lg max-w-sm text-center">
-                  <h2 className="text-xl font-bold text-white mb-2">Screen Too Small</h2>
-                  <p className="text-gray-300 mb-4">
-                    Your screen is too small to display this app properly. Please use a device with a larger screen.
-                  </p>
-                </div>
-              </div>
-            )}
-            
-            {/* Settings Button */}
-            <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
-              <AuthButton onOpenSettings={handleOpenSettings} />
-              <button
-                onClick={handleOpenSettings}
-                className="p-2 bg-black/30 backdrop-blur-md rounded-full hover:bg-black/50 transition-colors"
-                aria-label="Settings"
-              >
-                <SettingsIcon className="w-6 h-6 text-white" />
-              </button>
-            </div>
-            
-            {/* Settings Popup */}
-            {showSettings && (
-              <SettingsPopup isOpen={showSettings} onClose={handleCloseSettings} initialTab={initialSettingsTab} />
-            )}
-            
-            {/* Desktop Clock (visible on medium and larger screens) */}
-            <div className="fixed top-4 left-4 z-40 hidden md:block">
-              <TimeDisplay size="medium" showSeconds={true} />
-            </div>
-            
-            {/* Mobile Clock (visible on small screens) */}
-            <div className="fixed top-4 left-4 z-40 md:hidden">
-              <TimeDisplay size="small" showSeconds={false} />
-            </div>
-            
-            {/* Main Content */}
-            <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-screen">
-              {/* Tab Navigation */}
-              <div className="w-full max-w-4xl mb-6">
-                <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-              </div>
-              
-              {/* Tab Content */}
-              <div className="w-full max-w-4xl">
-                {activeTab === 'timer' && (
-                  <div className="space-y-6">
-                    <Timer />
-                    <TimerPresets />
-                  </div>
-                )}
-                
-                {activeTab === 'mood' && <MoodTracker />}
-                
-                {activeTab === 'meditation' && <Meditation />}
-                
-                {activeTab === 'chat' && <ChatBot />}
-              </div>
-            </div>
-            
-            {/* Music Players */}
-            <div className="fixed bottom-4 left-4 z-40">
-              <SpotifyPlayer />
-              <YouTubePlayer />
-            </div>
-          </main>
+          <PageProvider>
+            <MainContent />
+          </PageProvider>
         </MusicProvider>
       </AnalyticsProvider>
     </BackgroundProvider>

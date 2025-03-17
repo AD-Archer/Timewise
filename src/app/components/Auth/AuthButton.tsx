@@ -1,18 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePage } from '../../contexts/PageContext';
 import { LogIn } from 'lucide-react';
 import AuthModal from './AuthModal';
 import UserProfile from './UserProfile';
 
-interface AuthButtonProps {
-  onOpenSettings: () => void;
-}
-
-const AuthButton: React.FC<AuthButtonProps> = ({ onOpenSettings }) => {
+/**
+ * Authentication button that shows sign-in or user profile
+ */
+const AuthButton: React.FC = () => {
   const { user, loading } = useAuth();
+  const { openSettings } = usePage();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Listen for custom event to open auth modal
+  useEffect(() => {
+    const handleOpenAuthModal = () => {
+      setIsAuthModalOpen(true);
+    };
+
+    window.addEventListener("openAuthModal", handleOpenAuthModal as EventListener);
+    
+    return () => {
+      window.removeEventListener("openAuthModal", handleOpenAuthModal as EventListener);
+    };
+  }, []);
 
   const openAuthModal = () => {
     setIsAuthModalOpen(true);
@@ -31,7 +45,7 @@ const AuthButton: React.FC<AuthButtonProps> = ({ onOpenSettings }) => {
   return (
     <>
       {user ? (
-        <UserProfile onOpenSettings={onOpenSettings} />
+        <UserProfile onOpenSettings={openSettings} />
       ) : (
         <button
           onClick={openAuthModal}
