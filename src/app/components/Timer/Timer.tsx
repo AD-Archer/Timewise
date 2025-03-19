@@ -2,6 +2,9 @@
 /**
  * Timer Component
  * 
+ * Persists across tab changes to maintain timer state
+ * Uses CSS to control visibility based on active tab
+ * 
  * Note
  * It connects with the SpotifyPlayer component through the MusicContext to pause music on timer end I think I could use this to stop youtube but I am unsure how to do it consistently,
  * 
@@ -14,16 +17,15 @@ import { useAnalytics } from '../../contexts/AnalyticsContext';
 import { useAchievements } from '../../contexts/AchievementsContext';
 import { useMusic } from '../../contexts/MusicContext';
 import { useTimer } from '../../contexts/TimerContext';
+import useTabVisibility from '../../hooks/useTabVisibility';
 
 const Timer = () => {
   const { settings, updateSettings } = useSettings();
-  const { activePresetId } = useTimer();
-  const [timeLeft, setTimeLeft] = useState(settings.durations.pomodoro);
-  const [isRunning, setIsRunning] = useState(false);
-  const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
+  const { activePresetId, timeLeft, setTimeLeft, isRunning, setIsRunning, currentMode, setCurrentMode } = useTimer();
   const pomodoroCompletedRef = useRef(false);
   const newPomodoroCountRef = useRef(0);
   const { pauseMusic } = useMusic();
+  const { isVisible } = useTabVisibility('timer');
 
   // Sound effects
   const bellSound = useSound('/sounds/meditation-bell.mp3');
@@ -37,11 +39,21 @@ const Timer = () => {
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
     setIsClient(true);
+    console.log('Timer component mounted and will persist across tab changes');
   }, []);
 
   useEffect(() => {
-    setTimeLeft(settings.durations[currentMode]);
-  }, [settings.durations, currentMode]);
+    // Only set timeLeft on initial load or when mode changes
+    if (!isClient) return;
+    const savedTimeLeft = localStorage.getItem('timeLeft');
+    const savedIsRunning = localStorage.getItem('isRunning');
+    if (savedTimeLeft && savedIsRunning) {
+      setTimeLeft(parseInt(savedTimeLeft, 10));
+      setIsRunning(savedIsRunning === 'true');
+    } else {
+      setTimeLeft(settings.durations[currentMode]);
+    }
+  }, [settings.durations, currentMode, setTimeLeft, isClient]);
 
   // Check for achievements when a pomodoro is completed
   const checkAchievements = useCallback(() => {
@@ -175,14 +187,16 @@ const Timer = () => {
     recordPomodoroComplete, 
     recordBreakComplete, 
     bellSound,
-    pauseMusic
+    pauseMusic,
+    setTimeLeft,
+    setIsRunning
   ]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => {
+        setTimeLeft((prev: number) => {
           if (prev <= 1) {
             clearInterval(interval);
             handleTimerComplete();
@@ -193,14 +207,14 @@ const Timer = () => {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, handleTimerComplete]);
+  }, [isRunning, timeLeft, handleTimerComplete, setTimeLeft]);
 
   const resetTimer = () => {
     setTimeLeft(settings.durations[currentMode]);
     setIsRunning(false);
   };
 
-  const toggleTimer = () => setIsRunning((prev) => !prev);
+  const toggleTimer = () => setIsRunning((prev: boolean) => !prev);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -208,8 +222,34 @@ const Timer = () => {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Save the current time left and running state
+        localStorage.setItem('timeLeft', timeLeft.toString());
+        localStorage.setItem('isRunning', isRunning.toString());
+      } else if (document.visibilityState === 'visible') {
+        // Restore the time left and running state
+        const savedTimeLeft = localStorage.getItem('timeLeft');
+        const savedIsRunning = localStorage.getItem('isRunning');
+        if (savedTimeLeft) {
+          setTimeLeft(parseInt(savedTimeLeft, 10));
+        }
+        if (savedIsRunning === 'true') {
+          setIsRunning(true);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [timeLeft, isRunning, setTimeLeft, setIsRunning]);
+
   return (
-    <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl">
+    <div className={`backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl ${!isVisible ? 'hidden' : ''}`}>
       {/* Mode Selection */}
       <div className="flex justify-center gap-2 md:gap-3 mb-6 md:mb-8">
         {Object.keys(settings.durations).map((mode) => (

@@ -24,6 +24,12 @@ export interface TimerPreset {
 interface TimerContextType {
   presets: TimerPreset[];
   activePresetId: string | null;
+  timeLeft: number;
+  isRunning: boolean;
+  currentMode: 'pomodoro' | 'shortBreak' | 'longBreak';
+  setCurrentMode: React.Dispatch<React.SetStateAction<'pomodoro' | 'shortBreak' | 'longBreak'>>;
+  setTimeLeft: React.Dispatch<React.SetStateAction<number>>;
+  setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   addPreset: (preset: Omit<TimerPreset, 'id'>) => string;
   updatePreset: (id: string, preset: Partial<Omit<TimerPreset, 'id'>>) => void;
   deletePreset: (id: string) => void;
@@ -80,6 +86,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [activePresetId, setActivePresetId] = useState<string | null>('default');
   const [isClient, setIsClient] = useState(false);
   const { user } = useAuth();
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
 
   // Set isClient to true after initial render
   useEffect(() => {
@@ -252,6 +261,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       value={{ 
         presets, 
         activePresetId, 
+        timeLeft,
+        isRunning,
+        currentMode,
+        setCurrentMode,
+        setTimeLeft,
+        setIsRunning,
         addPreset, 
         updatePreset, 
         deletePreset, 

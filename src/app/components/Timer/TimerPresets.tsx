@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTimer, TimerPreset } from '../../contexts/TimerContext';
 import { Clock, Plus, Trash2, Check, X, Edit, Save } from 'lucide-react';
+import useTabVisibility from '../../hooks/useTabVisibility';
 
+/**
+ * TimerPresets component
+ * Displays and manages timer presets
+ * Persists across tab changes
+ */
 const TimerPresets = () => {
   const { presets, activePresetId, applyPreset, deletePreset, saveCurrentAsPreset, updatePreset } = useTimer();
   const [isCreating, setIsCreating] = useState(false);
@@ -11,6 +17,7 @@ const TimerPresets = () => {
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const { isVisible } = useTabVisibility('timer');
 
   // Check if we're on mobile
   useEffect(() => {
@@ -68,7 +75,7 @@ const TimerPresets = () => {
   };
 
   return (
-    <div className="backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-6 shadow-2xl w-full md:w-auto">
+    <div className={`backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-6 shadow-2xl w-full md:w-auto ${!isVisible ? 'hidden' : ''}`}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-white">Timer Presets</h2>
         {!isCreating && (

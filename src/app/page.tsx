@@ -16,6 +16,7 @@ import { PageProvider, usePage } from './contexts/PageContext';
 import TimeDisplay from "./components/Clock";
 import IntroAnimation from "./components/IntroAnimation";
 import TimerPresets from "./components/Timer/TimerPresets";
+import TimerDisplay from "./components/Timer/TimerDisplay";
 import ChatBot from "./components/ChatBot/ChatBot";
 import Meditation from "./components/Meditation/Meditation";
 import AuthButton from "./components/Auth/AuthButton";
@@ -227,19 +228,17 @@ function MainContent() {
           <TabNavigation />
         </div>
         
-        {/* Tab Content */}
+        {/* All tab content - components use useTabVisibility for controlling visibility */}
         <div className="w-full max-w-4xl">
-          {activeTab === 'timer' && (
-            <div className="space-y-6">
-              <Timer />
-              <TimerPresets />
-            </div>
-          )}
+          {/* Timer components are always rendered but visibility controlled by useTabVisibility */}
+          <div className="space-y-6">
+            <Timer />
+            <TimerPresets />
+          </div>
           
+          {/* Other tabs still use conditional rendering */}
           {activeTab === 'mood' && <MoodTracker />}
-          
           {activeTab === 'meditation' && <Meditation />}
-          
           {activeTab === 'chat' && <ChatBot />}
         </div>
       </div>
@@ -249,6 +248,9 @@ function MainContent() {
         <SpotifyPlayer />
         <YouTubePlayer />
       </div>
+      
+      {/* Persistent Timer Display */}
+      <TimerDisplay />
     </main>
   );
 }
