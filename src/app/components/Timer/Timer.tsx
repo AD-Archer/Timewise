@@ -26,8 +26,7 @@ const Timer = () => {
   const { pauseMusic } = useMusic();
 
   // Sound effects
-  const pomodoroEndSound = useSound('/sounds/timer-end.mp3');
-  const breakEndSound = useSound('/sounds/break-end.mp3');
+  const bellSound = useSound('/sounds/meditation-bell.mp3');
 
   const { recordPomodoroComplete, recordBreakComplete, analytics } = useAnalytics();
   const { unlockAchievement } = useAchievements();
@@ -119,13 +118,17 @@ const Timer = () => {
     pauseMusic();
     
     if (currentMode === 'pomodoro') {
-      pomodoroEndSound.play();
+      bellSound.play();
       const newCount = settings.pomodoroCount + 1;
       newPomodoroCountRef.current = newCount;
       pomodoroCompletedRef.current = true;
       
       updateSettings({ pomodoroCount: newCount });
-      recordPomodoroComplete(settings.durations.pomodoro / 60);
+      
+      // Ensure recordPomodoroComplete is called in a callback
+      setTimeout(() => {
+        recordPomodoroComplete(settings.durations.pomodoro / 60);
+      }, 0);
 
       if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
@@ -141,7 +144,7 @@ const Timer = () => {
         }
       }
     } else if (currentMode === 'longBreak') {
-      breakEndSound.play();
+      bellSound.play();
       recordBreakComplete();
       // Reset pomodoro count after completing the long break
       updateSettings({ pomodoroCount: 0 });
@@ -151,7 +154,7 @@ const Timer = () => {
         setIsRunning(true);
       }
     } else {
-      breakEndSound.play();
+      bellSound.play();
       recordBreakComplete();
       setCurrentMode('pomodoro');
       if (settings.autoStartPomodoros) {
@@ -171,8 +174,7 @@ const Timer = () => {
     updateSettings, 
     recordPomodoroComplete, 
     recordBreakComplete, 
-    pomodoroEndSound, 
-    breakEndSound,
+    bellSound,
     pauseMusic
   ]);
 
