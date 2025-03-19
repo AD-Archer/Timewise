@@ -1,19 +1,40 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTimer } from '../../contexts/TimerContext';
 import { Pause, Play, Clock } from 'lucide-react';
 import { usePage } from '../../contexts/PageContext';
 
 /**
- * Persistent timer display for the bottom right corner
+ * Persistent timer display
  * Shows the current timer regardless of active tab
+ * Only visible on medium and larger screens (768px+)
  * Allows toggling timer state by clicking
  * Click with Alt/Option to switch to Timer tab
  */
 const TimerDisplay = () => {
   const { timeLeft, isRunning, setIsRunning, currentMode } = useTimer();
   const { setActiveTab, activeTab } = usePage();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile on component mount and window resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint in Tailwind is 768px
+    };
+    
+    // Set initial value
+    checkMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile);
+    
+    // Clean up event listener on component unmount
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Don't render component at all on mobile
+  if (isMobile) return null;
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -63,7 +84,7 @@ const TimerDisplay = () => {
 
   return (
     <div 
-      className="fixed bottom-4 right-4 z-40 backdrop-blur-md bg-black/30 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-3 cursor-pointer hover:bg-black/40 transition-colors"
+      className="fixed bottom-4 right-4 z-30 backdrop-blur-md bg-black/30 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-3 cursor-pointer hover:bg-black/40 transition-colors"
       onClick={handleClick}
       title="Click to toggle timer | Alt+Click to go to Timer tab"
     >
