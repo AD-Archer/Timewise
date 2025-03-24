@@ -89,6 +89,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
+  const [lastSettingsUpdate, setLastSettingsUpdate] = useState<string | null>(null);
 
   // Set isClient to true after initial render
   useEffect(() => {
@@ -117,14 +118,29 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             });
             
             setPresets(mergedPresets);
-            setActivePresetId(firestoreData.activePresetId);
+            
+            // Check if activePresetId has been cleared in localStorage
+            const localActivePresetId = localStorage.getItem('activePresetId');
+            if (localActivePresetId === null) {
+              setActivePresetId(null);
+            } else {
+              setActivePresetId(firestoreData.activePresetId);
+            }
             return;
           }
         }
         
         // Fall back to localStorage if not logged in or no Firestore data
         const savedPresets = getLocalStorage<TimerPreset[]>('timerPresets', defaultPresets);
-        const savedActivePresetId = getLocalStorage<string | null>('activePresetId', 'default');
+        
+        // Check if activePresetId has been cleared in localStorage
+        const localActivePresetId = localStorage.getItem('activePresetId');
+        if (localActivePresetId === null) {
+          setActivePresetId(null);
+        } else {
+          const savedActivePresetId = getLocalStorage<string | null>('activePresetId', 'default');
+          setActivePresetId(savedActivePresetId);
+        }
         
         // Make sure we always have the default presets
         const mergedPresets = [...savedPresets];
@@ -137,7 +153,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         });
         
         setPresets(mergedPresets);
-        setActivePresetId(savedActivePresetId);
       } catch (error) {
         console.error('Error loading timer presets:', error);
         setPresets(defaultPresets);
@@ -146,6 +161,17 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     };
     
     loadPresets();
+    
+    // Set up an interval to check for activePresetId changes in localStorage
+    const checkActivePresetInterval = setInterval(() => {
+      const localActivePresetId = localStorage.getItem('activePresetId');
+      if (localActivePresetId === null && activePresetId !== null) {
+        console.log('activePresetId cleared in localStorage, updating state');
+        setActivePresetId(null);
+      }
+    }, 500);
+    
+    return () => clearInterval(checkActivePresetInterval);
   }, [isClient, user]);
 
   // Save presets to Firestore if user is logged in, otherwise to localStorage
@@ -169,6 +195,50 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     
     savePresets();
   }, [presets, activePresetId, isClient, user]);
+
+  // Track settings changes to detect manual updates
+  useEffect(() => {
+    if (!isClient) return;
+    
+    // Get a string representation of the current settings
+    const currentSettingsString = JSON.stringify({
+      durations: settings.durations,
+      targetPomodoros: settings.targetPomodoros,
+      autoStartBreaks: settings.autoStartBreaks,
+      autoStartPomodoros: settings.autoStartPomodoros,
+    });
+    
+    // If this is the first settings load, just save it
+    if (lastSettingsUpdate === null) {
+      setLastSettingsUpdate(currentSettingsString);
+      return;
+    }
+    
+    // If settings changed and we have an active preset, check if it matches the preset
+    if (activePresetId && currentSettingsString !== lastSettingsUpdate) {
+      const activePreset = presets.find(p => p.id === activePresetId);
+      
+      if (activePreset) {
+        const presetSettingsString = JSON.stringify({
+          durations: activePreset.durations,
+          targetPomodoros: activePreset.targetPomodoros,
+          autoStartBreaks: activePreset.autoStartBreaks,
+          autoStartPomodoros: activePreset.autoStartPomodoros,
+        });
+        
+        // If settings don't match the active preset, clear the active preset
+        if (currentSettingsString !== presetSettingsString) {
+          console.log('Settings changed, clearing active preset');
+          setActivePresetId(null);
+          // Signal to Timer component that settings were manually changed
+          localStorage.setItem('manualSettingsChange', Date.now().toString());
+        }
+      }
+    }
+    
+    // Update the last settings string
+    setLastSettingsUpdate(currentSettingsString);
+  }, [settings, activePresetId, presets, isClient]);
 
   // Add a new preset
   const addPreset = (preset: Omit<TimerPreset, 'id'>) => {
@@ -286,4 +356,4 @@ export function useTimer() {
     throw new Error('useTimer must be used within a TimerProvider');
   }
   return context;
-} 
+}

@@ -51,7 +51,20 @@ const Settings = ({ currentTab }: SettingsProps) => {
   }, [settings]);
 
   const applySettings = () => {
-    updateSettings({
+    // Validate input values
+    if (isNaN(pomodoro) || isNaN(shortBreak) || isNaN(longBreak) || 
+        pomodoro <= 0 || shortBreak <= 0 || longBreak <= 0) {
+      alert('Please enter valid positive numbers for all timer durations');
+      return;
+    }
+    
+    console.log('Applying new settings:', {
+      pomodoro: pomodoro * 60,
+      shortBreak: shortBreak * 60,
+      longBreak: longBreak * 60
+    });
+    
+    const newSettings = {
       durations: {
         pomodoro: pomodoro * 60,
         shortBreak: shortBreak * 60,
@@ -60,7 +73,20 @@ const Settings = ({ currentTab }: SettingsProps) => {
       targetPomodoros,
       autoStartBreaks,
       autoStartPomodoros,
-    });
+    };
+    
+    // First update the settings
+    updateSettings(newSettings);
+    
+    // Clear any active preset to ensure settings take effect
+    localStorage.removeItem('activePresetId');
+    
+    // Force timer to update
+    localStorage.removeItem('timeLeft');
+    localStorage.setItem('settingsLastUpdated', Date.now().toString());
+    
+    // Show confirmation toast
+    alert('Settings applied successfully! Timer has been updated.');
   };
 
   const handleChange = (setter: React.Dispatch<React.SetStateAction<number>>) => (e: React.ChangeEvent<HTMLInputElement>) => {

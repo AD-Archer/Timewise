@@ -267,90 +267,41 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     loadChatHistory();
   }, [isClient, user, settings.chatExportEnabled]);
 
-  // Save settings to Firestore if user is logged in, otherwise to localStorage
-  useEffect(() => {
-    if (!isClient) return;
+  // Update settings function with improved persistence
+  const updateSettings = (newSettings: Partial<Settings>) => {
+    console.log('Updating settings:', newSettings);
     
-    const saveSettings = async () => {
-      try {
-        if (user) {
-          // Save to Firestore if user is logged in
-          await saveUserSettings(user.uid, settings);
-        } else {
-          // Save to localStorage if not logged in
-          setLocalStorage('timerSettings', settings);
-        }
-      } catch (error) {
-        console.error('Error saving settings:', error);
-      }
-    };
-    
-    saveSettings();
-  }, [settings, isClient, user]);
-  
-  // Save Spotify playlists to localStorage only (not to Firestore)
-  useEffect(() => {
-    if (!isClient) return;
-    
-    setLocalStorage('spotifyPlaylists', spotifyPlaylists);
-    setLocalStorage('currentSpotifyPlaylistUri', currentSpotifyPlaylistUri);
-  }, [spotifyPlaylists, currentSpotifyPlaylistUri, isClient]);
-
-  // Save chat history to localStorage and Firestore when it changes
-  useEffect(() => {
-    if (!isClient) return;
-    
-    // Always save to localStorage
-    setLocalStorage('chatHistory', chatHistory);
-    
-    // If user is logged in and chatExportEnabled is true, also save to Firestore
-    if (user && settings.chatExportEnabled && chatHistory.length > 0) {
-      const saveToFirestore = async () => {
-        try {
-          console.log('Saving chat history to Firestore...');
-          await saveUserChatHistory(user.uid, chatHistory);
-          console.log(`Successfully saved ${chatHistory.length} chat messages to Firestore`);
-        } catch (error) {
-          console.error('Error saving chat history to Firestore:', error);
-        }
-      };
-      
-      // Debounce the save to avoid too many Firestore writes
-      const timeoutId = setTimeout(() => {
-        saveToFirestore();
-      }, 2000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [chatHistory, isClient, user, settings.chatExportEnabled]);
-
-  // Handle pending updates
-  useEffect(() => {
-    if (pendingUpdateRef.current !== null) {
-      const newSettings = pendingUpdateRef.current;
-      pendingUpdateRef.current = null;
-      
-      setSettings(prev => ({
+    // Update settings state with new values
+    setSettings(prev => {
+      // Create the updated settings object
+      const updatedSettings = {
         ...prev,
         ...newSettings,
-        playlists: newSettings.playlists || prev.playlists || [],
-      }));
-    }
-  }, [settings.pomodoroCount]);
-
-  const updateSettings = (newSettings: Partial<Settings>) => {
-    // For pomodoro count updates, use the ref to avoid render-time updates
-    if ('pomodoroCount' in newSettings) {
-      pendingUpdateRef.current = newSettings;
-      return;
-    }
-    
-    // For other settings, update immediately
-    setSettings(prev => ({
-      ...prev,
-      ...newSettings,
-      playlists: newSettings.playlists || prev.playlists || [],
-    }));
+        // Special handling for nested durations object
+        durations: newSettings.durations 
+          ? { ...prev.durations, ...newSettings.durations } 
+          : prev.durations,
+      };
+      
+      // Immediately save to localStorage for persistence
+      if (isClient) {
+        setLocalStorage('timerSettings', updatedSettings);
+        
+        // Set a flag to indicate settings were updated
+        localStorage.setItem('settingsLastUpdated', Date.now().toString());
+        
+        // If user is logged in, save to Firestore
+        if (user) {
+          saveUserSettings(user.uid, updatedSettings)
+            .catch(error => console.error('Error saving settings to Firestore:', error));
+        }
+      } else {
+        // If not client-side yet, store the update in ref to apply later
+        pendingUpdateRef.current = newSettings;
+      }
+      
+      return updatedSettings;
+    });
   };
 
   const resetAllSettings = () => {
@@ -420,6 +371,56 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Save Spotify playlists to localStorage only (not to Firestore)
+  useEffect(() => {
+    if (!isClient) return;
+    
+    setLocalStorage('spotifyPlaylists', spotifyPlaylists);
+    setLocalStorage('currentSpotifyPlaylistUri', currentSpotifyPlaylistUri);
+  }, [spotifyPlaylists, currentSpotifyPlaylistUri, isClient]);
+
+  // Save chat history to localStorage and Firestore when it changes
+  useEffect(() => {
+    if (!isClient) return;
+    
+    // Always save to localStorage
+    setLocalStorage('chatHistory', chatHistory);
+    
+    // If user is logged in and chatExportEnabled is true, also save to Firestore
+    if (user && settings.chatExportEnabled && chatHistory.length > 0) {
+      const saveToFirestore = async () => {
+        try {
+          console.log('Saving chat history to Firestore...');
+          await saveUserChatHistory(user.uid, chatHistory);
+          console.log(`Successfully saved ${chatHistory.length} chat messages to Firestore`);
+        } catch (error) {
+          console.error('Error saving chat history to Firestore:', error);
+        }
+      };
+      
+      // Debounce the save to avoid too many Firestore writes
+      const timeoutId = setTimeout(() => {
+        saveToFirestore();
+      }, 2000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [chatHistory, isClient, user, settings.chatExportEnabled]);
+
+  // Handle pending updates
+  useEffect(() => {
+    if (pendingUpdateRef.current !== null) {
+      const newSettings = pendingUpdateRef.current;
+      pendingUpdateRef.current = null;
+      
+      setSettings(prev => ({
+        ...prev,
+        ...newSettings,
+        playlists: newSettings.playlists || prev.playlists || [],
+      }));
+    }
+  }, [settings.pomodoroCount]);
+
   return (
     <SettingsContext.Provider value={{ 
       settings, 
@@ -448,4 +449,4 @@ export function useSettings() {
     throw new Error('useSettings must be used within a SettingsProvider');
   }
   return context;
-} 
+}

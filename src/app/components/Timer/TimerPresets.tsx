@@ -13,7 +13,7 @@ import { useSettings } from '../../contexts/SettingsContext';
  */
 const TimerPresets = () => {
   const { presets, activePresetId, applyPreset, deletePreset, saveCurrentAsPreset, updatePreset, setTimeLeft, currentMode } = useTimer();
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const [isCreating, setIsCreating] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
@@ -85,6 +85,14 @@ const TimerPresets = () => {
     if (preset) {
       // Update the timer immediately with the new duration based on current mode
       setTimeLeft(preset.durations[currentMode]);
+      
+      // Ensure settings are fully synced with the selected preset
+      updateSettings({
+        durations: preset.durations,
+        targetPomodoros: preset.targetPomodoros,
+        autoStartBreaks: preset.autoStartBreaks,
+        autoStartPomodoros: preset.autoStartPomodoros
+      });
     }
   };
 
