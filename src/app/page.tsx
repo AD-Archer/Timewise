@@ -232,8 +232,8 @@ function MainContent() {
         <div className="w-full max-w-4xl">
           {/* Timer components are always rendered but visibility controlled by useTabVisibility */}
           <div className="space-y-6">
-            <Timer />
             <TimerPresets />
+            <Timer />
           </div>
           
           {/* Other tabs still use conditional rendering */}
