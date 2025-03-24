@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTimer, TimerPreset } from '../../contexts/TimerContext';
 import { Clock, Plus, Trash2, Check, X, Edit, Save } from 'lucide-react';
 import useTabVisibility from '../../hooks/useTabVisibility';
+import { useSettings } from '../../contexts/SettingsContext';
 
 /**
  * TimerPresets component
@@ -11,7 +12,8 @@ import useTabVisibility from '../../hooks/useTabVisibility';
  * Persists across tab changes
  */
 const TimerPresets = () => {
-  const { presets, activePresetId, applyPreset, deletePreset, saveCurrentAsPreset, updatePreset } = useTimer();
+  const { presets, activePresetId, applyPreset, deletePreset, saveCurrentAsPreset, updatePreset, setTimeLeft, currentMode } = useTimer();
+  const { settings } = useSettings();
   const [isCreating, setIsCreating] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
@@ -71,6 +73,18 @@ const TimerPresets = () => {
       updatePreset(id, { name: editName.trim() });
       setEditingPresetId(null);
       setEditName('');
+    }
+  };
+
+  // Handle applying a preset with immediate time update
+  const handleApplyPreset = (id: string) => {
+    applyPreset(id);
+    
+    // Find the preset to get its durations
+    const preset = presets.find(p => p.id === id);
+    if (preset) {
+      // Update the timer immediately with the new duration based on current mode
+      setTimeLeft(preset.durations[currentMode]);
     }
   };
 
@@ -182,7 +196,7 @@ const TimerPresets = () => {
               <div className="flex items-center gap-1">
                 {activePresetId !== preset.id && (
                   <button
-                    onClick={() => applyPreset(preset.id)}
+                    onClick={() => handleApplyPreset(preset.id)}
                     className="p-1.5 bg-white/20 text-white rounded-md hover:bg-white/30 transition-colors"
                     title="Apply preset"
                   >
@@ -207,4 +221,4 @@ const TimerPresets = () => {
   );
 };
 
-export default TimerPresets; 
+export default TimerPresets;

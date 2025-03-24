@@ -21,7 +21,7 @@ import useTabVisibility from '../../hooks/useTabVisibility';
 
 const Timer = () => {
   const { settings, updateSettings } = useSettings();
-  const { activePresetId, timeLeft, setTimeLeft, isRunning, setIsRunning, currentMode, setCurrentMode } = useTimer();
+  const { activePresetId, timeLeft, setTimeLeft, isRunning, setIsRunning, currentMode, setCurrentMode, presets } = useTimer();
   const pomodoroCompletedRef = useRef(false);
   const newPomodoroCountRef = useRef(0);
   const { pauseMusic } = useMusic();
@@ -45,15 +45,33 @@ const Timer = () => {
   useEffect(() => {
     // Only set timeLeft on initial load or when mode changes
     if (!isClient) return;
-    const savedTimeLeft = localStorage.getItem('timeLeft');
-    const savedIsRunning = localStorage.getItem('isRunning');
-    if (savedTimeLeft && savedIsRunning) {
-      setTimeLeft(parseInt(savedTimeLeft, 10));
-      setIsRunning(savedIsRunning === 'true');
+    
+    // If a preset is active, use its durations
+    if (activePresetId) {
+      const activePreset = presets.find(p => p.id === activePresetId);
+      if (activePreset) {
+        // Only update timeLeft if timer is not running or if it's a new mode
+        if (!isRunning || localStorage.getItem('currentMode') !== currentMode) {
+          setTimeLeft(activePreset.durations[currentMode]);
+        }
+      }
     } else {
-      setTimeLeft(settings.durations[currentMode]);
+      // Fallback to settings if no preset is active
+      const savedTimeLeft = localStorage.getItem('timeLeft');
+      const savedIsRunning = localStorage.getItem('isRunning');
+      const savedCurrentMode = localStorage.getItem('currentMode');
+      
+      if (savedTimeLeft && savedIsRunning && savedCurrentMode === currentMode) {
+        setTimeLeft(parseInt(savedTimeLeft, 10));
+        setIsRunning(savedIsRunning === 'true');
+      } else {
+        setTimeLeft(settings.durations[currentMode]);
+      }
     }
-  }, [settings.durations, currentMode, setTimeLeft, isClient]);
+    
+    // Save current mode to localStorage
+    localStorage.setItem('currentMode', currentMode);
+  }, [settings.durations, currentMode, setTimeLeft, isClient, activePresetId, presets, isRunning]);
 
   // Check for achievements when a pomodoro is completed
   const checkAchievements = useCallback(() => {
@@ -145,13 +163,33 @@ const Timer = () => {
       if (newCount >= settings.targetPomodoros) {
         setCurrentMode('longBreak');
         if (settings.autoStartBreaks) {
-          setTimeLeft(settings.durations.longBreak);
+          // Get the active preset if one is selected
+          if (activePresetId) {
+            const activePreset = presets.find(p => p.id === activePresetId);
+            if (activePreset) {
+              setTimeLeft(activePreset.durations.longBreak);
+            } else {
+              setTimeLeft(settings.durations.longBreak);
+            }
+          } else {
+            setTimeLeft(settings.durations.longBreak);
+          }
           setIsRunning(true);
         }
       } else {
         setCurrentMode('shortBreak');
         if (settings.autoStartBreaks) {
-          setTimeLeft(settings.durations.shortBreak);
+          // Get the active preset if one is selected
+          if (activePresetId) {
+            const activePreset = presets.find(p => p.id === activePresetId);
+            if (activePreset) {
+              setTimeLeft(activePreset.durations.shortBreak);
+            } else {
+              setTimeLeft(settings.durations.shortBreak);
+            }
+          } else {
+            setTimeLeft(settings.durations.shortBreak);
+          }
           setIsRunning(true);
         }
       }
@@ -162,7 +200,17 @@ const Timer = () => {
       updateSettings({ pomodoroCount: 0 });
       setCurrentMode('pomodoro');
       if (settings.autoStartPomodoros) {
-        setTimeLeft(settings.durations.pomodoro);
+        // Get the active preset if one is selected
+        if (activePresetId) {
+          const activePreset = presets.find(p => p.id === activePresetId);
+          if (activePreset) {
+            setTimeLeft(activePreset.durations.pomodoro);
+          } else {
+            setTimeLeft(settings.durations.pomodoro);
+          }
+        } else {
+          setTimeLeft(settings.durations.pomodoro);
+        }
         setIsRunning(true);
       }
     } else {
@@ -170,7 +218,17 @@ const Timer = () => {
       recordBreakComplete();
       setCurrentMode('pomodoro');
       if (settings.autoStartPomodoros) {
-        setTimeLeft(settings.durations.pomodoro);
+        // Get the active preset if one is selected
+        if (activePresetId) {
+          const activePreset = presets.find(p => p.id === activePresetId);
+          if (activePreset) {
+            setTimeLeft(activePreset.durations.pomodoro);
+          } else {
+            setTimeLeft(settings.durations.pomodoro);
+          }
+        } else {
+          setTimeLeft(settings.durations.pomodoro);
+        }
         setIsRunning(true);
       }
     }
@@ -189,7 +247,9 @@ const Timer = () => {
     bellSound,
     pauseMusic,
     setTimeLeft,
-    setIsRunning
+    setIsRunning,
+    activePresetId,
+    presets
   ]);
 
   useEffect(() => {
@@ -202,108 +262,99 @@ const Timer = () => {
             handleTimerComplete();
             return 0;
           }
+          // Save timeLeft to localStorage for persistence
+          localStorage.setItem('timeLeft', String(prev - 1));
+          localStorage.setItem('isRunning', String(true));
           return prev - 1;
         });
       }, 1000);
+    } else if (!isRunning) {
+      // Save isRunning state to localStorage
+      localStorage.setItem('isRunning', String(false));
     }
-    return () => clearInterval(interval);
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isRunning, timeLeft, handleTimerComplete, setTimeLeft]);
 
-  const resetTimer = () => {
-    setTimeLeft(settings.durations[currentMode]);
-    setIsRunning(false);
-  };
-
-  const toggleTimer = () => setIsRunning((prev: boolean) => !prev);
-
+  // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        // Save the current time left and running state
-        localStorage.setItem('timeLeft', timeLeft.toString());
-        localStorage.setItem('isRunning', isRunning.toString());
-      } else if (document.visibilityState === 'visible') {
-        // Restore the time left and running state
-        const savedTimeLeft = localStorage.getItem('timeLeft');
-        const savedIsRunning = localStorage.getItem('isRunning');
-        if (savedTimeLeft) {
-          setTimeLeft(parseInt(savedTimeLeft, 10));
-        }
-        if (savedIsRunning === 'true') {
-          setIsRunning(true);
-        }
+  // Get mode name with proper formatting
+  const getModeName = () => {
+    switch(currentMode) {
+      case 'pomodoro':
+        return 'Focus';
+      case 'shortBreak':
+        return 'Short Break';
+      case 'longBreak':
+        return 'Long Break';
+      default:
+        return '';
+    }
+  };
+
+  // Handle reset button click
+  const handleReset = () => {
+    // Get the active preset if one is selected
+    if (activePresetId) {
+      const activePreset = presets.find(p => p.id === activePresetId);
+      if (activePreset) {
+        setTimeLeft(activePreset.durations[currentMode]);
+      } else {
+        setTimeLeft(settings.durations[currentMode]);
       }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [timeLeft, isRunning, setTimeLeft, setIsRunning]);
+    } else {
+      setTimeLeft(settings.durations[currentMode]);
+    }
+    setIsRunning(false);
+  };
 
   return (
-    <div className={`backdrop-blur-sm bg-white/10 rounded-xl p-4 md:p-8 shadow-2xl ${!isVisible ? 'hidden' : ''}`}>
-      {/* Mode Selection */}
-      <div className="flex justify-center gap-2 md:gap-3 mb-6 md:mb-8">
-        {Object.keys(settings.durations).map((mode) => (
+    <div className={`flex flex-col items-center justify-center w-full max-w-md mx-auto ${!isVisible ? 'hidden' : ''}`}>
+      <div className="w-full backdrop-blur-md bg-white/10 rounded-xl p-6 md:p-8 shadow-2xl mb-6">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-white">{getModeName()}</h2>
+          <p className="text-white/70 text-sm">
+            {currentMode === 'pomodoro' 
+              ? `Pomodoro ${settings.pomodoroCount + 1} of ${settings.targetPomodoros}` 
+              : currentMode === 'shortBreak' 
+                ? 'Take a short break' 
+                : 'Take a long break'}
+          </p>
+        </div>
+        
+        <div className="text-center mb-8">
+          <div className="font-mono text-7xl md:text-8xl font-bold text-white">
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+        
+        <div className="flex justify-center items-center gap-4">
           <button
-            key={mode}
-            onClick={() => {
-              setCurrentMode(mode as 'pomodoro' | 'shortBreak' | 'longBreak');
-              setTimeLeft(settings.durations[mode as keyof typeof settings.durations]);
-              setIsRunning(false);
-            }}
-            className={`px-3 md:px-6 py-2 text-sm md:text-base rounded-full transition-all duration-300 ${
-              currentMode === mode 
-                ? 'bg-pink-600 text-white shadow-lg scale-105' 
-                : 'bg-white/20 text-white/80 hover:bg-white/30'
+            onClick={() => setIsRunning(!isRunning)}
+            className={`flex items-center justify-center w-16 h-16 rounded-full transition-all ${
+              isRunning 
+                ? 'bg-red-500 hover:bg-red-600' 
+                : 'bg-green-500 hover:bg-green-600'
             }`}
           >
-            {mode.replace(/([A-Z])/g, ' $1').trim()}
+            {isRunning ? <Pause size={28} /> : <Play size={28} />}
           </button>
-        ))}
-      </div>
-
-      {/* Timer Display */}
-      <div className="text-center mb-6 md:mb-8">
-        <div className="text-5xl md:text-7xl font-bold text-white tracking-wider">
-          {formatTime(timeLeft)}
+          
+          <button
+            onClick={handleReset}
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 transition-all"
+            title="Reset timer"
+          >
+            <RefreshCw size={20} />
+          </button>
         </div>
-        <div className="text-sm text-white/60 mt-2">
-          Pomodoro #{settings.pomodoroCount + 1} of {settings.targetPomodoros}
-          {activePresetId && (
-            <span className="ml-2 text-xs bg-pink-600/40 px-2 py-0.5 rounded-full">
-              Using preset
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex justify-center gap-4 md:gap-6">
-        <button 
-          onClick={toggleTimer} 
-          className={`p-3 md:p-4 rounded-full transition-all duration-300 ${
-            isRunning 
-              ? 'bg-yellow-500 hover:bg-yellow-600' 
-              : 'bg-green-500 hover:bg-green-600'
-          } text-white shadow-lg hover:scale-110`}
-        >
-          {isRunning ? <Pause size={20} /> : <Play size={20} />}
-        </button>
-        <button 
-          onClick={resetTimer} 
-          className="p-3 md:p-4 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg transition-all duration-300 hover:scale-110"
-        >
-          <RefreshCw size={20} />
-        </button>
       </div>
     </div>
   );
