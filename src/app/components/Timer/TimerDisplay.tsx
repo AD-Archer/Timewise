@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTimer } from '../../contexts/TimerContext';
-import { Pause, Play, Clock } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 import { usePage } from '../../contexts/PageContext';
 
 /**
