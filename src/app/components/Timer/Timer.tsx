@@ -38,7 +38,6 @@ const Timer = () => {
   
   // Add state to track settings updates
   const [settingsUpdated, setSettingsUpdated] = useState<string | null>(null);
-  const [manualSettingsChange, setManualSettingsChange] = useState<string | null>(null);
   
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
@@ -49,7 +48,7 @@ const Timer = () => {
     if (!activePresetId) {
       setTimeLeft(settings.durations[currentMode]);
     }
-  }, []);
+  }, [activePresetId, currentMode, settings.durations, setTimeLeft]);
 
   // Primary effect to handle settings and preset changes
   useEffect(() => {
@@ -76,7 +75,7 @@ const Timer = () => {
     // Save current mode to localStorage
     localStorage.setItem('currentMode', currentMode);
     
-  }, [settings.durations, currentMode, activePresetId, presets, isClient, isRunning]);
+  }, [settings.durations, currentMode, activePresetId, presets, isClient, isRunning, setTimeLeft]);
 
   // Effect to handle mode changes
   useEffect(() => {
@@ -93,7 +92,7 @@ const Timer = () => {
     } else {
       setTimeLeft(settings.durations[currentMode]);
     }
-  }, [currentMode, activePresetId, presets, settings.durations, isClient]);
+  }, [currentMode, activePresetId, presets, settings.durations, isClient, setTimeLeft]);
 
   // Effect to check for settings updates from localStorage
   useEffect(() => {
@@ -117,7 +116,7 @@ const Timer = () => {
     const intervalId = setInterval(checkSettingsUpdates, 500);
     
     return () => clearInterval(intervalId);
-  }, [isClient, isRunning, activePresetId, settings.durations, currentMode, settingsUpdated]);
+  }, [isClient, isRunning, activePresetId, settings.durations, currentMode, settingsUpdated, setTimeLeft]);
 
   // Check for achievements when a pomodoro is completed
   const checkAchievements = useCallback(() => {
@@ -295,7 +294,8 @@ const Timer = () => {
     setTimeLeft,
     setIsRunning,
     activePresetId,
-    presets
+    presets,
+    setCurrentMode
   ]);
 
   useEffect(() => {
