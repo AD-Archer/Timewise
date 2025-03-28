@@ -172,7 +172,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }, 2000);
     
     return () => clearInterval(checkActivePresetInterval);
-  }, [isClient, user]);
+  }, [activePresetId, isClient, user]);
 
   // Save presets to Firestore if user is logged in, otherwise to localStorage
   useEffect(() => {
