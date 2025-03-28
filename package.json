@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "bad": "npm run lint && npm run build #bad stands for build and deploy"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

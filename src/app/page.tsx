@@ -23,15 +23,9 @@ import AuthButton from "./components/Auth/AuthButton";
 import { useAuth } from "./contexts/AuthContext";
 import { useSettings } from "./contexts/SettingsContext";
 import { saveUserSettings, loadUserData } from "./services/userDataService";
-import type { UserSettings } from "./services/userDataService";
+import { UserSettings } from './services/userDataService';
 import { useMood } from "./contexts/MoodContext";
-
-// Define the Playlist type to match userDataService
-interface Playlist {
-  id: string;
-  name: string;
-  videos: string[];
-}
+import { PlaylistInfo, Settings } from './contexts/SettingsContext';
 
 /**
  * Main content component that uses the PageContext
@@ -77,10 +71,10 @@ function MainContent() {
                 videos: playlist.videos || []
               }));
               
-              compatibleSettings.playlists = convertedPlaylists as any;
+              compatibleSettings.playlists = convertedPlaylists as PlaylistInfo[];
             }
             
-            updateSettings(compatibleSettings as any);
+            updateSettings(compatibleSettings as Partial<Settings>);
           }
           
           // Load mood data if it exists and storeMoodDataLocally is false
@@ -155,7 +149,7 @@ function MainContent() {
               id: playlist.id,
               name: playlist.name,
               videos: []
-            })) as unknown as Playlist[]
+            })) as unknown as PlaylistInfo[]
           };
           
           // Only save the settings object to Firestore (not Spotify playlists or chat history)

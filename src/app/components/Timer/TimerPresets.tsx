@@ -13,7 +13,7 @@ import { useSettings } from '../../contexts/SettingsContext';
  */
 const TimerPresets = () => {
   const { presets, activePresetId, applyPreset, deletePreset, saveCurrentAsPreset, updatePreset, setTimeLeft, currentMode } = useTimer();
-  const { settings, updateSettings } = useSettings();
+  const { updateSettings } = useSettings();
   const [isCreating, setIsCreating] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
