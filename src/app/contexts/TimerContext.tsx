@@ -162,17 +162,17 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     
     loadPresets();
     
-    // Set up an interval to check for activePresetId changes in localStorage
+    // Set up an interval to check for activePresetId changes in localStorage with a longer delay
     const checkActivePresetInterval = setInterval(() => {
       const localActivePresetId = localStorage.getItem('activePresetId');
       if (localActivePresetId === null && activePresetId !== null) {
         console.log('activePresetId cleared in localStorage, updating state');
         setActivePresetId(null);
       }
-    }, 500);
+    }, 2000);
     
     return () => clearInterval(checkActivePresetInterval);
-  }, [isClient, user, activePresetId]);
+  }, [isClient, user]);
 
   // Save presets to Firestore if user is logged in, otherwise to localStorage
   useEffect(() => {
@@ -238,7 +238,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     
     // Update the last settings string
     setLastSettingsUpdate(currentSettingsString);
-  }, [settings, activePresetId, presets, isClient, lastSettingsUpdate, setLastSettingsUpdate, setActivePresetId]);
+  }, [settings, activePresetId, presets, isClient, lastSettingsUpdate]);
 
   // Add a new preset
   const addPreset = (preset: Omit<TimerPreset, 'id'>) => {

@@ -39,60 +39,49 @@ const Timer = () => {
   // Add state to track settings updates
   const [settingsUpdated, setSettingsUpdated] = useState<string | null>(null);
   
+  // Add state to track initial mount
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
   // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
-    setIsClient(true);
-    console.log('Timer component mounted and will persist across tab changes');
-    
-    // Initial timer setup based on settings
-    if (!activePresetId) {
-      setTimeLeft(settings.durations[currentMode]);
+    if (!isClient) {
+      setIsClient(true);
+      return;
     }
-  }, [activePresetId, currentMode, settings.durations, setTimeLeft]);
+
+    // Only run initialization once
+    if (!hasInitialized) {
+      console.log('Timer component mounted and will persist across tab changes');
+      setHasInitialized(true);
+      
+      // Initial timer setup based on settings
+      if (!activePresetId) {
+        setTimeLeft(settings.durations[currentMode]);
+      }
+    }
+  }, [isClient, hasInitialized, activePresetId, currentMode, settings.durations, setTimeLeft]);
 
   // Primary effect to handle settings and preset changes
   useEffect(() => {
     if (!isClient) return;
     
-    console.log('Settings or preset changed, updating timer');
-    
-    // Only update timeLeft if timer is not running
+    // Only update timeLeft if timer is not running and settings actually changed
     if (!isRunning) {
-      if (activePresetId) {
-        // If a preset is active, use its durations
-        const activePreset = presets.find(p => p.id === activePresetId);
-        if (activePreset) {
-          console.log('Using active preset duration:', activePreset.durations[currentMode]);
-          setTimeLeft(activePreset.durations[currentMode]);
-        }
-      } else {
-        // Use settings if no preset is active
-        console.log('Using settings duration:', settings.durations[currentMode]);
-        setTimeLeft(settings.durations[currentMode]);
+      const newTimeLeft = activePresetId 
+        ? presets.find(p => p.id === activePresetId)?.durations[currentMode] ?? settings.durations[currentMode]
+        : settings.durations[currentMode];
+      
+      // Only update if the time actually changed
+      if (newTimeLeft !== timeLeft) {
+        console.log('Settings or preset changed, updating timer');
+        setTimeLeft(newTimeLeft);
       }
     }
     
     // Save current mode to localStorage
     localStorage.setItem('currentMode', currentMode);
     
-  }, [settings.durations, currentMode, activePresetId, presets, isClient, isRunning, setTimeLeft]);
-
-  // Effect to handle mode changes
-  useEffect(() => {
-    if (!isClient) return;
-    
-    console.log('Mode changed to:', currentMode);
-    
-    // When mode changes, always update the timer
-    if (activePresetId) {
-      const activePreset = presets.find(p => p.id === activePresetId);
-      if (activePreset) {
-        setTimeLeft(activePreset.durations[currentMode]);
-      }
-    } else {
-      setTimeLeft(settings.durations[currentMode]);
-    }
-  }, [currentMode, activePresetId, presets, settings.durations, isClient, setTimeLeft]);
+  }, [settings.durations, currentMode, activePresetId, presets, isClient, isRunning, timeLeft, setTimeLeft]);
 
   // Effect to check for settings updates from localStorage
   useEffect(() => {
@@ -106,17 +95,20 @@ const Timer = () => {
         
         // Only update if timer is not running and no preset is active
         if (!isRunning && !activePresetId) {
-          setTimeLeft(settings.durations[currentMode]);
+          const newTimeLeft = settings.durations[currentMode];
+          if (newTimeLeft !== timeLeft) {
+            setTimeLeft(newTimeLeft);
+          }
         }
       }
     };
     
-    // Check immediately and set up interval
+    // Check immediately and set up interval with a longer delay
     checkSettingsUpdates();
-    const intervalId = setInterval(checkSettingsUpdates, 500);
+    const intervalId = setInterval(checkSettingsUpdates, 2000); // Increased from 500ms to 2000ms
     
     return () => clearInterval(intervalId);
-  }, [isClient, isRunning, activePresetId, settings.durations, currentMode, settingsUpdated, setTimeLeft]);
+  }, [isClient, isRunning, activePresetId, settings.durations, currentMode, settingsUpdated, timeLeft, setTimeLeft]);
 
   // Check for achievements when a pomodoro is completed
   const checkAchievements = useCallback(() => {
