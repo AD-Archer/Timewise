@@ -23,6 +23,7 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(settings.pomodoroChartTimeframe || 'week');
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(true);
+  const prevTimeframeRef = useRef(timeframe);
 
   const formatTime = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
@@ -107,17 +108,16 @@ const AnalyticsDisplay = ({ showCards = true }: AnalyticsDisplayProps) => {
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [timeframe, analytics.dailyStats]);
+  }, [timeframe, analytics.dailyStats]); // Only depend on timeframe and dailyStats array
 
   // Update settings when timeframe changes
-  const prevTimeframeRef = useRef(timeframe);
   useEffect(() => {
     // Only update settings if timeframe actually changed
     if (prevTimeframeRef.current !== timeframe) {
       updateSettings({ pomodoroChartTimeframe: timeframe });
       prevTimeframeRef.current = timeframe;
     }
-  }, [timeframe, updateSettings]);
+  }, [timeframe, updateSettings]); // Include updateSettings to be safe
 
   // Show loading state
   if (isAnalyticsLoading) {

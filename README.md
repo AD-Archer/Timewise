@@ -15,7 +15,7 @@ Trello: available upon request
   - **YouTube Playlist Player**: Seamlessly play curated focus music or user-selected videos
   - **Spotify Player**: Connect to your Spotify account to play your favorite focus playlists
 - **Mood Tracking**: Log and visualize your mood patterns over time to understand productivity correlations
-- **AI Chatbot**: Integrated OpenAI-powered assistant with customizable personality to help with productivity tips and motivation
+- **AI Chatbot**: Integrated Gemini-powered assistant with customizable personality to help with productivity tips and motivation
 - **Changeable Wallpaper**: Personalize your workspace with dynamic or static wallpapers
 - **Analytics Dashboard**: Track your productivity metrics, streaks, and usage patterns
 - **Achievements System**: Gamified productivity with unlockable achievements
@@ -36,7 +36,7 @@ Trello: available upon request
 - **APIs & Integrations**:
   - YouTube IFrame API for embedded playlists
   - Spotify Web API for music integration
-  - OpenAI API for AI chatbot functionality
+  - Gemini API for AI chatbot functionality
 - **State Management**: React Context API for efficient state handling
 - **Data Visualization**: Recharts for analytics and mood tracking visualizations
 
@@ -47,7 +47,7 @@ Trello: available upon request
 - Node.js (v18 or higher)
 - npm or yarn
 - Firebase account (for backend functionality)
-- OpenAI API key (for chatbot functionality)
+- Gemini API key (for chatbot functionality)
 - Spotify Developer account (for Spotify integration)
 
 ### Installation Steps
@@ -78,8 +78,8 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key
+# Gemini Configuration
+GEMINI_API_KEY=your_gemini_api_key
 
 # Spotify Configuration
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_spotify_client_id

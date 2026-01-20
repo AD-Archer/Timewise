@@ -122,8 +122,8 @@ const SettingsPopup = ({ isOpen, onClose, initialTab = 'timer' }: SettingsPopupP
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="relative w-full max-w-lg bg-black/50 rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="relative w-full max-w-lg bg-black/80 rounded-xl overflow-hidden flex flex-col max-h-[80vh]">
         <button 
           onClick={onClose}
           className="absolute -top-2 -right-2 p-2 bg-pink-600 text-white rounded-full hover:bg-pink-700 transition-colors z-10"

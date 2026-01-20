@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 import { useAuth } from './AuthContext';
 import { getUserSettings, saveUserSettings } from '../firebase/firestore';
@@ -54,8 +54,8 @@ export interface Settings {
   chatbotEnabled?: boolean;
   chatbotProactiveSuggestions?: boolean;
   chatbotPersonality?: 'supportive' | 'direct' | 'humorous' | 'analytical';
-  chatbotModel?: 'gpt-3.5-turbo' | 'gpt-4';
-  customOpenAIKey?: string;
+  chatbotModel?: 'gemini-2.5-flash-lite' | 'gemini-1.5-pro';
+  customGeminiKey?: string;
   chatExportEnabled?: boolean;
   // Meditation settings
   meditationSessionHistory?: {
@@ -127,8 +127,8 @@ const defaultSettings: Settings = {
   chatbotEnabled: true,
   chatbotProactiveSuggestions: true,
   chatbotPersonality: 'supportive',
-  chatbotModel: 'gpt-3.5-turbo',
-  customOpenAIKey: '',
+  chatbotModel: 'gemini-2.5-flash-lite',
+  customGeminiKey: '',
   chatExportEnabled: true,
   // Meditation settings
   meditationSessionHistory: [],
@@ -168,8 +168,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           const firestoreSettings = await getUserSettings(user.uid);
           
           if (firestoreSettings) {
+            // Migrate old GPT models and old Gemini models to new Gemini model
+            const migratedSettings: any = { ...firestoreSettings };
+            if (migratedSettings.chatbotModel === 'gpt-3.5-turbo' || 
+                migratedSettings.chatbotModel === 'gpt-4' ||
+                migratedSettings.chatbotModel === 'gemini-1.5-flash') {
+              migratedSettings.chatbotModel = 'gemini-2.5-flash-lite';
+            }
+            
             // Ensure we always have the default playlist available
-            const mergedPlaylists = [...(firestoreSettings.playlists || [])];
+            const mergedPlaylists = [...(migratedSettings.playlists || [])];
             
             // Add default playlist if it doesn't exist in saved playlists
             if (!mergedPlaylists.some(p => p.id === defaultPlaylist.id)) {
@@ -178,11 +186,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             
             setSettings({
               ...defaultSettings,
-              ...firestoreSettings,
+              ...migratedSettings,
               playlists: mergedPlaylists,
               // If current playlist is null or undefined, use default
-              currentPlaylistId: firestoreSettings.currentPlaylistId || defaultPlaylist.id,
-            });
+              currentPlaylistId: migratedSettings.currentPlaylistId || defaultPlaylist.id,
+            } as Settings);
             return;
           }
         }
@@ -190,8 +198,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // Fall back to localStorage if not logged in or no Firestore data
         const savedSettings = getLocalStorage('timerSettings', defaultSettings);
         
+        // Migrate old GPT models and old Gemini models to new Gemini model
+        const migratedSavedSettings: any = { ...savedSettings };
+        if (migratedSavedSettings.chatbotModel === 'gpt-3.5-turbo' || 
+            migratedSavedSettings.chatbotModel === 'gpt-4' ||
+            migratedSavedSettings.chatbotModel === 'gemini-1.5-flash') {
+          migratedSavedSettings.chatbotModel = 'gemini-2.5-flash-lite';
+        }
+        
         // Ensure we always have the default playlist available
-        const mergedPlaylists = [...(savedSettings.playlists || [])];
+        const mergedPlaylists = [...(migratedSavedSettings.playlists || [])];
         
         // Add default playlist if it doesn't exist in saved playlists
         if (!mergedPlaylists.some(p => p.id === defaultPlaylist.id)) {
@@ -200,7 +216,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         
         setSettings({
           ...defaultSettings,
-          ...savedSettings,
+          ...migratedSavedSettings,
           playlists: mergedPlaylists,
           // If current playlist is null or undefined, use default
           currentPlaylistId: savedSettings.currentPlaylistId || defaultPlaylist.id,
@@ -268,7 +284,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [isClient, user, settings.chatExportEnabled]);
 
   // Update settings function with improved persistence
-  const updateSettings = (newSettings: Partial<Settings>) => {
+  const updateSettings = useCallback((newSettings: Partial<Settings>) => {
     console.log('Updating settings:', newSettings);
     
     // Update settings state with new values
@@ -281,7 +297,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         durations: newSettings.durations 
           ? { ...prev.durations, ...newSettings.durations } 
           : prev.durations,
-      };
+      } as Settings;
       
       // Immediately save to localStorage for persistence
       if (isClient) {
@@ -292,7 +308,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         
         // If user is logged in, save to Firestore
         if (user) {
-          saveUserSettings(user.uid, updatedSettings)
+          saveUserSettings(user.uid, updatedSettings as any)
             .catch(error => console.error('Error saving settings to Firestore:', error));
         }
       } else {
@@ -302,7 +318,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       
       return updatedSettings;
     });
-  };
+  }, [isClient, user]);
 
   const resetAllSettings = () => {
     setSettings({
@@ -398,10 +414,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       };
       
-      // Debounce the save to avoid too many Firestore writes
+      // Increased debounce time to 5 seconds to prevent write exhaustion
       const timeoutId = setTimeout(() => {
         saveToFirestore();
-      }, 2000);
+      }, 5000);
       
       return () => clearTimeout(timeoutId);
     }

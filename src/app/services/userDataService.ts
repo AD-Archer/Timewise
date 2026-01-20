@@ -25,8 +25,8 @@ export interface UserSettings {
   chatbotEnabled?: boolean;
   chatbotProactiveSuggestions?: boolean;
   chatbotPersonality?: string;
-  chatbotModel?: string;
-  customOpenAIKey?: string;
+  chatbotModel?: 'gemini-2.5-flash-lite' | 'gemini-1.5-pro';
+  customGeminiKey?: string;
   chatExportEnabled?: boolean;
   timerPresets?: Array<{
     id: string;

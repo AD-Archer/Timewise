@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, ArrowDown, Lock, Loader2 } from 'lucide-react';
+import { Send, Bot, User, ArrowDown, Lock, Loader2, ArrowUp, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 
@@ -13,7 +13,7 @@ interface Message {
 
 const ChatBot: React.FC = () => {
   const { user } = useAuth();
-  const { settings, chatHistory, addChatMessage, isLoadingChat } = useSettings();
+  const { settings, chatHistory, addChatMessage, clearChatHistory, isLoadingChat } = useSettings();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -24,6 +24,7 @@ const ChatBot: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [showScrollToTopButton, setShowScrollToTopButton] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -33,13 +34,35 @@ const ChatBot: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Check scroll position to show/hide scroll button
+  // Simple function to scroll to top
+  const scrollToTop = () => {
+    messagesContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Check scroll position to show/hide scroll buttons
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
     
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
     const isScrolledUp = scrollHeight - scrollTop - clientHeight > 20;
+    const isScrolledDown = scrollTop > 20;
+    
     setShowScrollButton(isScrolledUp);
+    setShowScrollToTopButton(isScrolledDown);
+  };
+
+  // Clear all messages
+  const handleClearMessages = () => {
+    if (window.confirm('Are you sure you want to clear all messages? This is temporary, please use settings to remove them completely.')) {
+      setMessages([
+        {
+          role: 'assistant',
+          content: 'Hi there! I\'m your mood assistant. How are you feeling today?',
+          timestamp: new Date(),
+        },
+      ]);
+      clearChatHistory();
+    }
   };
 
   // Load chat history if available
@@ -96,7 +119,8 @@ const ChatBot: React.FC = () => {
             role: msg.role,
             content: msg.content,
           })),
-          customApiKey: settings.customOpenAIKey,
+          customApiKey: settings.customGeminiKey,
+          model: settings.chatbotModel || 'gemini-2.5-flash-lite',
           authToken,
         }),
       });
@@ -117,9 +141,9 @@ const ChatBot: React.FC = () => {
       const updatedMessages = [...messages, userMessage, assistantMessage];
       setMessages(updatedMessages);
       
-      // Save chat message to memory if chat export is enabled
+      // Save chat messages to history if chat export is enabled (batch both messages)
       if (settings.chatExportEnabled) {
-        // Add messages to chat history
+        // Add both messages at once to reduce Firestore writes
         addChatMessage({
           role: userMessage.role,
           content: userMessage.content,
@@ -292,7 +316,17 @@ const ChatBot: React.FC = () => {
               
               <div ref={messagesEndRef} />
               
-              {/* Scroll to bottom button */}
+              {/* Scroll buttons */}
+              {showScrollToTopButton && (
+                <button
+                  onClick={scrollToTop}
+                  className="absolute top-2 right-2 p-2 rounded-full bg-pink-600 text-white shadow-lg hover:bg-pink-700 transition-colors z-10"
+                  aria-label="Scroll to top"
+                >
+                  <ArrowUp size={18} />
+                </button>
+              )}
+              
               {showScrollButton && (
                 <button
                   onClick={scrollToBottom}
@@ -300,6 +334,17 @@ const ChatBot: React.FC = () => {
                   aria-label="Scroll to bottom"
                 >
                   <ArrowDown size={18} />
+                </button>
+              )}
+              
+              {/* Clear messages button */}
+              {messages.length > 1 && (
+                <button
+                  onClick={handleClearMessages}
+                  className="absolute top-2 left-2 p-2 rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 transition-colors z-10"
+                  aria-label="Clear all messages"
+                >
+                  <Trash2 size={18} />
                 </button>
               )}
             </div>
@@ -317,9 +362,9 @@ const ChatBot: React.FC = () => {
                 />
                 <button
                   onClick={handleSendMessage}
-                  disabled={isLoading || !input.trim()}
+                  disabled={isLoading || !input.trim() || isLoadingChat}
                   className={`flex-none p-2 rounded-full ${
-                    isLoading || !input.trim()
+                    isLoading || !input.trim() || isLoadingChat
                       ? 'bg-pink-600/50 cursor-not-allowed'
                       : 'bg-pink-600 hover:bg-pink-700 border border-pink-500/30'
                   } text-white transition-colors shadow-md`}

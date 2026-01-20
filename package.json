@@ -1,36 +1,39 @@
 {
   "name": "timewise",
-  "version": "1.0.0",
-  "private": true,
+  "version": "1.0.1",
+  "private": "false",
   "scripts": {
     "dev": "next dev",
+    "typecheck": "tsc --noEmit",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "bad": "npm run lint && npm run build #bad stands for build and deploy"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@plausible-analytics/tracker": "^0.4.4",
     "date-fns": "^3.6.0",
-    "dotenv": "^16.4.7",
-    "firebase": "^11.4.0",
-    "framer-motion": "^12.4.10",
+    "dotenv": "^16.6.1",
+    "firebase": "^11.10.0",
+    "framer-motion": "^12.27.5",
     "lucide-react": "^0.475.0",
-    "next": "15.4.10",
-    "openai": "^4.86.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "next": "16.1.4",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-toastify": "^11.0.5",
-    "recharts": "^2.12.3"
+    "recharts": "^2.15.4"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
+    "@eslint/eslintrc": "^3.3.3",
+    "@types/node": "^20.19.30",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.2",
     "eslint-config-next": "15.1.6",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
   }
 }

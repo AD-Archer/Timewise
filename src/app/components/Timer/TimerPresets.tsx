@@ -93,14 +93,6 @@ const TimerPresets = () => {
     if (preset) {
       // Update the timer immediately with the new duration based on current mode
       setTimeLeft(preset.durations[currentMode]);
-      
-      // Ensure settings are fully synced with the selected preset
-      updateSettings({
-        durations: preset.durations,
-        targetPomodoros: preset.targetPomodoros,
-        autoStartBreaks: preset.autoStartBreaks,
-        autoStartPomodoros: preset.autoStartPomodoros
-      });
     }
     
     // Close the popup after applying a preset

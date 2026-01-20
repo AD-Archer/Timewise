@@ -76,7 +76,7 @@ service cloud.firestore {
          (settings.chatbotPersonality in ['supportive', 'direct', 'humorous', 'analytical'])) &&
         (!('chatbotModel' in settings) || 
          (settings.chatbotModel in ['gpt-3.5-turbo', 'gpt-4'])) &&
-        (!('customOpenAIKey' in settings) || settings.customOpenAIKey is string) &&
+        (!('customGeminiKey' in settings) || settings.customGeminiKey is string) &&
         (!('chatExportEnabled' in settings) || settings.chatExportEnabled is bool);
     }
   }

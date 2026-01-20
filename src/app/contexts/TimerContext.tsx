@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getLocalStorage, setLocalStorage } from '../utils/localStorage';
 import { useSettings } from './SettingsContext';
 import { useAuth } from './AuthContext';
@@ -40,7 +40,7 @@ interface TimerContextType {
 // Create the context
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
-// Default presets
+// Default presets - moved outside component to prevent recreation
 const defaultPresets: TimerPreset[] = [
   {
     id: 'default',
@@ -90,6 +90,21 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [isRunning, setIsRunning] = useState(false);
   const [currentMode, setCurrentMode] = useState<'pomodoro' | 'shortBreak' | 'longBreak'>('pomodoro');
   const [lastSettingsUpdate, setLastSettingsUpdate] = useState<string | null>(null);
+  
+  // Use refs to track current values for stable access in effects
+  const presetsRef = useRef(presets);
+  const activePresetIdRef = useRef(activePresetId);
+  const isApplyingPresetRef = useRef(false);
+  const isLoadingPresetsRef = useRef(false);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    presetsRef.current = presets;
+  }, [presets]);
+  
+  useEffect(() => {
+    activePresetIdRef.current = activePresetId;
+  }, [activePresetId]);
 
   // Set isClient to true after initial render
   useEffect(() => {
@@ -102,6 +117,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     
     const loadPresets = async () => {
       try {
+        isLoadingPresetsRef.current = true;
+        
         if (user) {
           // Try to load from Firestore first
           const firestoreData = await getUserTimerPresets(user.uid);
@@ -157,22 +174,16 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         console.error('Error loading timer presets:', error);
         setPresets(defaultPresets);
         setActivePresetId('default');
+      } finally {
+        // Clear loading flag after a delay to allow state updates to settle
+        setTimeout(() => {
+          isLoadingPresetsRef.current = false;
+        }, 200);
       }
     };
     
     loadPresets();
-    
-    // Set up an interval to check for activePresetId changes in localStorage with a longer delay
-    const checkActivePresetInterval = setInterval(() => {
-      const localActivePresetId = localStorage.getItem('activePresetId');
-      if (localActivePresetId === null && activePresetId !== null) {
-        console.log('activePresetId cleared in localStorage, updating state');
-        setActivePresetId(null);
-      }
-    }, 2000);
-    
-    return () => clearInterval(checkActivePresetInterval);
-  }, [activePresetId, isClient, user]);
+  }, [isClient, user]);
 
   // Save presets to Firestore if user is logged in, otherwise to localStorage
   useEffect(() => {
@@ -200,6 +211,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isClient) return;
     
+    // Skip if we're currently applying a preset or loading presets
+    if (isApplyingPresetRef.current || isLoadingPresetsRef.current) return;
+    
     // Get a string representation of the current settings
     const currentSettingsString = JSON.stringify({
       durations: settings.durations,
@@ -215,8 +229,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
     
     // If settings changed and we have an active preset, check if it matches the preset
-    if (activePresetId && currentSettingsString !== lastSettingsUpdate) {
-      const activePreset = presets.find(p => p.id === activePresetId);
+    const currentActivePresetId = activePresetIdRef.current;
+    if (currentActivePresetId && currentSettingsString !== lastSettingsUpdate) {
+      const activePreset = presetsRef.current.find(p => p.id === currentActivePresetId);
       
       if (activePreset) {
         const presetSettingsString = JSON.stringify({
@@ -228,7 +243,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         
         // If settings don't match the active preset, clear the active preset
         if (currentSettingsString !== presetSettingsString) {
-          console.log('Settings changed, clearing active preset');
+          console.log('Settings changed manually, clearing active preset');
           setActivePresetId(null);
           // Signal to Timer component that settings were manually changed
           localStorage.setItem('manualSettingsChange', Date.now().toString());
@@ -238,7 +253,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     
     // Update the last settings string
     setLastSettingsUpdate(currentSettingsString);
-  }, [settings, activePresetId, presets, isClient, lastSettingsUpdate]);
+  }, [settings, isClient, lastSettingsUpdate]); // Add lastSettingsUpdate back
 
   // Add a new preset
   const addPreset = (preset: Omit<TimerPreset, 'id'>) => {
@@ -301,6 +316,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
+    // Set flag to prevent settings tracking during preset application
+    isApplyingPresetRef.current = true;
+    
     setActivePresetId(id);
     
     // Update the settings with the preset values
@@ -310,6 +328,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       autoStartBreaks: preset.autoStartBreaks,
       autoStartPomodoros: preset.autoStartPomodoros,
     });
+    
+    // Clear the flag after a short delay to allow settings to update
+    setTimeout(() => {
+      isApplyingPresetRef.current = false;
+    }, 100);
   };
 
   // Save current settings as a new preset
@@ -323,7 +346,15 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     };
     
     const newId = addPreset(newPreset);
+    
+    // Set flag to prevent settings tracking during preset application
+    isApplyingPresetRef.current = true;
     setActivePresetId(newId);
+    
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      isApplyingPresetRef.current = false;
+    }, 100);
   };
 
   return (

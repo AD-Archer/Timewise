@@ -501,22 +501,32 @@ const Settings = ({ currentTab }: SettingsProps) => {
           <div className="flex items-center gap-2">
             <label className="text-white/80 text-xs">Model:</label>
             <select
-              value={settings.chatbotModel || 'gpt-3.5-turbo'}
-              onChange={(e) => updateSettings({ chatbotModel: e.target.value as 'gpt-3.5-turbo' | 'gpt-4' })}
-              className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
+              value={settings.chatbotModel || 'gemini-2.5-flash-lite'}
+              onChange={(e) => updateSettings({ chatbotModel: e.target.value as 'gemini-2.5-flash-lite' | 'gemini-1.5-pro' })}
+              disabled={!settings.customGeminiKey || settings.customGeminiKey.trim() === ''}
+              className={`flex-1 px-2 py-1 text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500 ${
+                !settings.customGeminiKey || settings.customGeminiKey.trim() === ''
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-white/10 text-white'
+              }`}
             >
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster)</option>
-              <option value="gpt-4">GPT-4 (More Capable)</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Faster)</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro (More Capable)</option>
             </select>
           </div>
+          {(!settings.customGeminiKey || settings.customGeminiKey.trim() === '') && (
+            <p className="text-xs text-yellow-400 mt-1">
+              Set a custom API key above to choose different models.
+            </p>
+          )}
           
           <div className="flex items-center gap-2 mt-2">
             <label className="text-white/80 text-xs">Custom API Key (optional):</label>
             <input 
               type="password" 
-              value={settings.customOpenAIKey || ''}
-              onChange={(e) => updateSettings({ customOpenAIKey: e.target.value })}
-              placeholder="sk-..."
+              value={settings.customGeminiKey || ''}
+              onChange={(e) => updateSettings({ customGeminiKey: e.target.value })}
+              placeholder="AIza..."
               className="flex-1 px-2 py-1 bg-white/10 text-white text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-500"
             />
           </div>
@@ -540,7 +550,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
           <div className="flex gap-2 mt-2">
             <button 
               onClick={() => {
-                if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                if (confirm('Are you sure you want to clear all chat history? This is permanent.')) {
                   clearChatHistory();
                 }
               }}

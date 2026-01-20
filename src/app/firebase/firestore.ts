@@ -40,7 +40,7 @@ interface Settings {
   chatbotProactiveSuggestions?: boolean;
   chatbotPersonality?: 'supportive' | 'direct' | 'humorous' | 'analytical';
   chatbotModel?: 'gpt-3.5-turbo' | 'gpt-4';
-  customOpenAIKey?: string;
+  customGeminiKey?: string;
   chatExportEnabled?: boolean;
 }
 

@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// Initialize OpenAI client with environment variable
-// This will be overridden in the POST handler if a custom key is provided
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(request: Request) {
   try {
-    const { messages, customApiKey, authToken } = await request.json();
+    const { messages, customApiKey, model: selectedModel, authToken } = await request.json();
 
     // Check if the user provided an auth token
     if (!authToken) {
@@ -19,37 +13,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // In a production environment, you would verify the auth token
-    // with Firebase Admin SDK here. For now, we'll just check if it exists.
-
-    // If custom API key is provided, create a new client instance
-    let openaiClient = client;
-    if (customApiKey) {
-      openaiClient = new OpenAI({
-        apiKey: customApiKey,
-      });
+    // Check API key
+    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'API key not configured' },
+        { status: 500 }
+      );
     }
 
+    const genAI = new GoogleGenerativeAI(apiKey);
+
     // Add system message to guide the AI to focus on mood-related conversations
-    const systemMessage = {
-      role: 'system',
-      content: `You are a helpful mood assistant that specializes in discussing emotions, mental health, and well-being. 
+    const systemInstruction = `You are a helpful mood assistant that specializes in discussing emotions, mental health, and well-being. 
       Your goal is to help users reflect on their feelings, provide empathetic responses, and offer gentle suggestions 
       for improving their mood when appropriate. Keep responses concise, supportive, and focused on the user's emotional state.
       Never provide medical advice or diagnose conditions. If users express severe distress or suicidal thoughts, 
-      encourage them to seek professional help.`
-    };
+      encourage them to seek professional help.`;
 
-    // Call OpenAI API
-    const response = await openaiClient.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [systemMessage, ...messages],
-      temperature: 0.7,
-      max_tokens: 300,
+    const model = genAI.getGenerativeModel({
+      model: selectedModel || 'gemini-2.5-flash-lite',
+      systemInstruction,
     });
 
-    // Extract the assistant's message
-    const assistantMessage = response.choices[0]?.message?.content || 'Sorry, I couldn\'t process that.';
+    // Prepare chat history for Gemini
+    const history = messages.slice(0, -1).map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : m.role,
+      parts: [{ text: m.content }],
+    }));
+
+    const chat = model.startChat({ history });
+
+    // Call Gemini API
+    const lastMessage = messages[messages.length - 1].content;
+    const result = await chat.sendMessage(lastMessage);
+    const response = await result.response;
+    const assistantMessage = response.text();
 
     // Return the response
     return NextResponse.json({ message: assistantMessage });

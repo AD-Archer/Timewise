@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true, // Only if you want to ignore ESLint during builds
-  },
   images: {
     remotePatterns: [
       {
@@ -34,6 +31,13 @@ const nextConfig = {
       use: ['@svgr/webpack'],
     });
     return config;
+  },
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+      },
+    },
   },
 }
 
