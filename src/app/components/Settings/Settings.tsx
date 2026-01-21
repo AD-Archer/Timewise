@@ -40,6 +40,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSearchTag, setSelectedSearchTag] = useState<string | null>(null);
+  const [spotifySearchTerm, setSpotifySearchTerm] = useState('');
 
   useEffect(() => {
     setPomodoro(Math.floor(settings.durations.pomodoro / 60));
@@ -156,7 +157,79 @@ const Settings = ({ currentTab }: SettingsProps) => {
     });
   };
 
-  
+  // Spotify token helpers (use login via the player or try free access). Collapsible card state included.
+  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  const [spotifyTokenOpen, setSpotifyTokenOpen] = useState(false);
+  // Public token source for users without a Spotify account (experimental - may not work)
+  // Using proxy API service that mirrors Spotify endpoints
+  const PUBLIC_TOKENS_URL = 'https://raw.githubusercontent.com/itzzzme/spotify-key/refs/heads/main/token.json';
+
+  useEffect(() => {
+    try { 
+      const token = window.localStorage.getItem('spotify_token');
+      setSpotifyToken(token);
+      setSpotifyTokenOpen(!token); // Open if no token
+    } catch (e) { /* ignore */ }
+
+    const handler = () => {
+      try { 
+        const token = window.localStorage.getItem('spotify_token');
+        setSpotifyToken(token);
+        setSpotifyTokenOpen(!token); // Open if no token
+      } catch (e) { /* ignore */ }
+    };
+
+    window.addEventListener('spotifyTokenUpdated', handler);
+    return () => window.removeEventListener('spotifyTokenUpdated', handler);
+  }, []);
+
+  const clearToken = () => {
+    window.localStorage.removeItem('spotify_token');
+    window.dispatchEvent(new Event('spotifyTokenUpdated'));
+    setSpotifyToken(null);
+    alert('Spotify token cleared');
+  };
+
+  const openPlayerLogin = () => {
+    window.dispatchEvent(new Event('spotifyOpenLogin'));
+  };
+
+  const fetchPublicToken = async () => {
+    try {
+      const response = await fetch(PUBLIC_TOKENS_URL);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tokens: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Try each token until one works
+      for (const tokenData of data.tokens) {
+        try {
+          // Test the token by making a simple API call
+          const testResponse = await fetch('https://spotify-api-sage.vercel.app/v1/me', {
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`
+            }
+          });
+
+          if (testResponse.ok) {
+            window.localStorage.setItem('spotify_token', tokenData.access_token);
+            window.dispatchEvent(new Event('spotifyTokenUpdated'));
+            alert('Successfully loaded public token! You can now use Spotify playback.');
+            return;
+          }
+        } catch (error) {
+          console.log('Token failed, trying next one...');
+          continue;
+        }
+      }
+
+      throw new Error('All public tokens appear to be expired or invalid');
+    } catch (error) {
+      console.error('Failed to fetch working public token:', error);
+      alert('Unable to get free Spotify access. All public tokens are expired. Please use Spotify login instead.');
+    }
+  };
 
   const formatTime = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
@@ -642,86 +715,86 @@ const Settings = ({ currentTab }: SettingsProps) => {
           </div>
         </div>
         
-        {/* Tabs for YouTube and Spotify */}
-        <div className="flex border-b border-white/10 mb-4">
-          <button 
-            className={`px-4 py-2 text-sm font-medium ${currentSpotifyPlaylistUri ? 'text-white/50' : 'text-white border-b-2 border-pink-500'}`}
-            onClick={() => setCurrentSpotifyPlaylistUri(null)}
-          >
-            YouTube
-          </button>
-          <button 
-            className={`px-4 py-2 text-sm font-medium ${currentSpotifyPlaylistUri ? 'text-white border-b-2 border-pink-500' : 'text-white/50'}`}
-            onClick={() => {
-              if (spotifyPlaylists.length > 0 && !currentSpotifyPlaylistUri) {
-                setCurrentSpotifyPlaylistUri(spotifyPlaylists[0].uri);
-              }
-            }}
-          >
-            Spotify
-          </button>
-        </div>
-        
-        {currentSpotifyPlaylistUri ? (
+        {/* Content based on selected music service */}
+        {settings.preferredMusicService === 'spotify' ? (
           // Spotify Playlists Section
           <>
-            <div className="space-y-2 p-3 bg-white/5 rounded-lg">
-              <h4 className="text-sm font-medium text-white">Spotify Playlists</h4>
-              <p className="text-xs text-white/70">
-                Connect to Spotify using the player in the bottom left corner to access your playlists.
-              </p>
-            </div>
-            
-            {/* Saved Spotify Playlists - Scrollable */}
+            {/* Spotify Playlists Section */}
             <div className="flex-1 min-h-0">
-              <h4 className="text-sm font-medium text-white mb-2">Your Spotify Playlists</h4>
-              <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '200px' }}>
-                {spotifyPlaylists?.length > 0 ? (
-                  <div className="space-y-2">
-                    {spotifyPlaylists.map((playlist) => (
-                      <div 
-                        key={playlist.id} 
-                        className={`p-2 rounded-lg flex items-center justify-between ${
-                          currentSpotifyPlaylistUri === playlist.uri 
-                            ? 'bg-green-600/20 border border-green-500/50' 
-                            : 'bg-white/5'
-                        }`}
-                      >
-                        <div className="flex items-center flex-1 min-w-0">
-                          {playlist.imageUrl && (
-                            <div className="w-10 h-10 relative rounded overflow-hidden mr-2 flex-shrink-0">
-                              <Image
-                                src={playlist.imageUrl}
-                                alt={playlist.name}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-white truncate">{playlist.name}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 ml-2">
-                          <button
-                            onClick={() => setCurrentSpotifyPlaylistUri(playlist.uri)}
-                            className={`px-2 py-1 text-xs rounded ${
-                              currentSpotifyPlaylistUri === playlist.uri
-                                ? 'bg-green-600 text-white'
-                                : 'bg-white/10 text-white/70 hover:bg-white/20'
+              <div className="space-y-2 p-3 bg-white/5 rounded-lg mb-4">
+                <h4 className="text-sm font-medium text-white">Spotify Playlists</h4>
+                <p className="text-xs text-white/70">
+                  Connect to Spotify using the player in the bottom left corner to access your playlists.
+                </p>
+              </div>
+
+              {/* Search Spotify Playlists */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Search Spotify playlists..."
+                  value={spotifySearchTerm}
+                  onChange={(e) => setSpotifySearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+
+              {/* Saved Spotify Playlists - Scrollable */}
+              <div className="flex-1 min-h-0">
+                <h4 className="text-sm font-medium text-white mb-2">Your Spotify Playlists</h4>
+                <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '300px' }}>
+                  {(() => {
+                    const filteredPlaylists = spotifyPlaylists.filter(playlist =>
+                      playlist.name.toLowerCase().includes(spotifySearchTerm.toLowerCase())
+                    );
+                    return filteredPlaylists.length > 0 ? (
+                      <div className="space-y-2">
+                        {filteredPlaylists.map((playlist) => (
+                          <div 
+                            key={playlist.id} 
+                            className={`p-2 rounded-lg flex items-center justify-between ${
+                              currentSpotifyPlaylistUri === playlist.uri 
+                                ? 'bg-green-600/20 border border-green-500/50' 
+                                : 'bg-white/5'
                             }`}
                           >
-                            {currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
-                          </button>
-                        </div>
+                            <div className="flex items-center flex-1 min-w-0">
+                              {playlist.imageUrl && (
+                                <div className="w-10 h-10 relative rounded overflow-hidden mr-2 flex-shrink-0">
+                                  <Image
+                                    src={playlist.imageUrl}
+                                    alt={playlist.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white truncate">{playlist.name}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 ml-2">
+                              <button
+                                onClick={() => setCurrentSpotifyPlaylistUri(playlist.uri)}
+                                className={`px-2 py-1 text-xs rounded ${
+                                  currentSpotifyPlaylistUri === playlist.uri
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                }`}
+                              >
+                                {currentSpotifyPlaylistUri === playlist.uri ? 'Selected' : 'Select'}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-white/50 italic">
-                    No Spotify playlists found. Connect to Spotify using the player in the bottom left corner.
-                  </p>
-                )}
+                    ) : (
+                      <p className="text-sm text-white/50 italic">
+                        {spotifySearchTerm ? 'No playlists match your search.' : 'No Spotify playlists found. Connect to Spotify using the player in the bottom left corner.'}
+                      </p>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
             
@@ -738,6 +811,30 @@ const Settings = ({ currentTab }: SettingsProps) => {
               <p className="text-xs text-white/50 mt-2">
                 Note: Spotify playback requires a Spotify Premium account
               </p>
+
+              <div className="mt-4">
+                <div className={`p-3 bg-white/5 rounded-lg ${spotifyTokenOpen ? 'space-y-3' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-white mb-0">Spotify Access Token</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-white/60 mr-2">{spotifyToken ? 'Token set' : 'No token'}</span>
+                      <button onClick={() => setSpotifyTokenOpen(!spotifyTokenOpen)} className="px-2 py-1 text-xs bg-white/10 rounded">{spotifyTokenOpen ? 'Hide' : 'Show'}</button>
+                    </div>
+                  </div>
+
+                  {spotifyTokenOpen && (
+                    <>
+                      <p className="text-xs text-white/70 mb-1">Connect your Spotify account to access playlists. Click the button below to open the login flow.</p>
+
+                      <div className="flex gap-2">
+                        <button onClick={openPlayerLogin} className="px-3 py-1 text-xs bg-green-600/20 text-green-300 rounded hover:bg-green-600/30">Login via Spotify</button>
+                        <button onClick={fetchPublicToken} className="px-3 py-1 text-xs bg-orange-600/20 text-orange-300 rounded hover:bg-orange-600/30">Try Free Access</button>
+                        <button onClick={clearToken} className="px-3 py-1 text-xs bg-red-600/10 text-red-300 rounded hover:bg-red-600/20">Clear token</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         ) : (
@@ -823,7 +920,7 @@ const Settings = ({ currentTab }: SettingsProps) => {
               <ol className="text-xs text-white/70 list-decimal pl-4 space-y-1">
                 <li>Go to YouTube and find a playlist you like</li>
                 <li>Copy the playlist URL from your browser</li>
-                <li>Paste it in the input field above</li>
+                <li>Click the button in the Spotify Access Token card above to login</li>
                 <li>Give it a name (optional)</li>
                 <li>Click &quot;Add Playlist&quot;</li>
               </ol>

@@ -1,41 +1,44 @@
 /**
- * I would like to thank JoeKarlsson/react-spotify-player for the code that I used to create this component.
+ * Spotify Player using proxy API for search and playback
  */
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { SkipBack, SkipForward, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Search } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useMusic } from '../../contexts/MusicContext';
-import dotenv from 'dotenv';
-dotenv.config();
 
-// Replace with your actual Spotify client ID
-const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-// Use a redirect URI that matches one registered in the Spotify Developer Dashboard
-const REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI || 'http://localhost:3000/'; // I'm unsure how to set up this to work in preview with vercel so if you're working on this codebase and want to use vercel for previws... I don't know
-const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
-const RESPONSE_TYPE = 'token';
-const SCOPES = [
-  'user-read-private',
-  'user-read-email',
-  'streaming',
-  'user-read-playback-state',
-  'user-modify-playback-state',
-  'playlist-read-private',
-  'playlist-read-collaborative'
-];
+// Proxy API base URL
+const SPOTIFY_PROXY_API = 'https://spotify-api-sage.vercel.app';
 
 interface Track {
   id: string;
   name: string;
   artists: { name: string }[];
-  album: { images: { url: string }[] };
+  album: { 
+    name?: string;
+    images: { url: string }[] 
+  };
   uri: string;
+  duration_ms: number;
+  external_urls: { spotify: string };
 }
 
-// Define types for Spotify SDK events
+interface Album {
+  id: string;
+  name: string;
+  artists: { name: string }[];
+  images: { url: string }[];
+  uri: string;
+  external_urls: { spotify: string };
+}
+
+interface SearchResults {
+  tracks?: { items: Track[] };
+  albums?: { items: Album[] };
+}
+
 interface PlayerState {
   track_window: {
     current_track: {
@@ -113,16 +116,16 @@ interface SpotifyPlaylistResponse {
 }
 
 export default function SpotifyPlayer() {
-  const { 
-    settings, 
-    updateSettings, 
-    spotifyPlaylists, 
-    currentSpotifyPlaylistUri, 
-    updateSpotifyPlaylists, 
-    setCurrentSpotifyPlaylistUri 
-  } = useSettings();
+  const { settings, updateSettings, spotifyPlaylists, currentSpotifyPlaylistUri, setCurrentSpotifyPlaylistUri } = useSettings();
   const { registerPlayer, setIsPlaying: setMusicContextPlaying } = useMusic();
-  const [token, setToken] = useState<string | null>(null);
+  
+  // Search and playback state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResults>({});
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  
+  // Player state
   const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -131,20 +134,91 @@ export default function SpotifyPlayer() {
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [isLoading, setIsLoading] = useState(false);
-  const playerRef = useRef<SpotifyPlayer | null>(null);
   const [lastPlayedPlaylistUri, setLastPlayedPlaylistUri] = useState<string | null>(null);
+  const playerRef = useRef<SpotifyPlayer | null>(null);
 
-  // Define logout function with useCallback to avoid dependency issues
-  const logout = useCallback(() => {
+  // Search for tracks and albums
+  const searchSpotify = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults({});
+      return;
+    }
+
+    setIsSearching(true);
     try {
-      // Disconnect the player if it exists
-      const currentPlayer = player || playerRef.current;
-      if (currentPlayer) {
-        currentPlayer.disconnect();
-      }
+      const response = await fetch(
+        `${SPOTIFY_PROXY_API}/v1/search?q=${encodeURIComponent(query)}&type=track,album&limit=20`
+      );
       
-      // Reset all state
-      setToken(null);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data);
+      } else {
+        console.error('Search failed:', response.status);
+        setSearchResults({});
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults({});
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Play a track directly
+  const playTrack = useCallback(async (track: Track) => {
+    if (!deviceId) return;
+    
+    setIsLoading(true);
+    try {
+      await fetch(`${SPOTIFY_PROXY_API}/v1/me/player/play?device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uris: [track.uri]
+        })
+      });
+      
+      setSelectedTrack(track);
+      setCurrentTrack(track);
+      setIsPlaying(true);
+      setMusicContextPlaying(true);
+    } catch (error) {
+      console.error('Error playing track:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [deviceId, setMusicContextPlaying]);
+
+  // Play an album
+  const playAlbum = useCallback(async (album: Album) => {
+    if (!deviceId) return;
+    
+    setIsLoading(true);
+    try {
+      await fetch(`${SPOTIFY_PROXY_API}/v1/me/player/play?device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          context_uri: album.uri
+        })
+      });
+      
+      setIsPlaying(true);
+      setMusicContextPlaying(true);
+    } catch (error) {
+      console.error('Error playing album:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [deviceId, setMusicContextPlaying]);
+
+  const logout = useCallback(async () => {
+    try {
       setPlayer(null);
       playerRef.current = null;
       setCurrentTrack(null);
@@ -191,50 +265,38 @@ export default function SpotifyPlayer() {
     };
   }, []);
 
-  // Load the Spotify Web Playback SDK
+  // Load the Spotify Web Playback SDK (no token required for proxy)
   useEffect(() => {
-    if (!token) return;
-
     const script = document.createElement('script');
     script.src = 'https://sdk.scdn.co/spotify-player.js';
     script.async = true;
     document.body.appendChild(script);
 
-    // Cleanup function to handle script removal
+    // Cleanup function
     return () => {
-      // Only remove the script if it exists in the document
       const scriptElement = document.querySelector('script[src="https://sdk.scdn.co/spotify-player.js"]');
       if (scriptElement && scriptElement.parentNode) {
         scriptElement.parentNode.removeChild(scriptElement);
       }
       
-      // Disconnect player if it exists
       if (playerRef.current) {
         playerRef.current.disconnect();
       }
     };
-  }, [token]);
-
-  // Update isPlaying in both local state and MusicContext
-  const updatePlayingState = useCallback((playing: boolean) => {
-    setIsPlaying(playing);
-    setMusicContextPlaying(playing);
-  }, [setMusicContextPlaying]);
+  }, []);
 
   // Setup player once SDK is loaded
   useEffect(() => {
-    if (!token) return;
-    
     window.onSpotifyWebPlaybackSDKReady = () => {
       const spotifyPlayer = new window.Spotify.Player({
-        name: 'Pomodoro Clock Web Player',
+        name: 'Timewise Music Player',
         getOAuthToken: (cb: (token: string) => void) => {
-          cb(token);
+          // Proxy API might not need real tokens
+          cb('proxy-token');
         },
         volume: volume
       });
 
-      // Store player in both state and ref for different access patterns
       setPlayer(spotifyPlayer);
       playerRef.current = spotifyPlayer;
 
@@ -253,421 +315,206 @@ export default function SpotifyPlayer() {
         
         const currentTrackInfo = state.track_window.current_track;
         
-        // Make sure all required properties exist
-        if (!currentTrackInfo.id || !currentTrackInfo.name || !currentTrackInfo.artists || 
-            !currentTrackInfo.album || !currentTrackInfo.album.images || 
-            !currentTrackInfo.album.images.length) {
-          console.warn('Incomplete track information received from Spotify', currentTrackInfo);
-          return;
-        }
-        
         setCurrentTrack({
           id: currentTrackInfo.id,
           name: currentTrackInfo.name,
           artists: currentTrackInfo.artists,
-          album: { images: [{ url: currentTrackInfo.album.images[0].url }] },
-          uri: currentTrackInfo.uri
+          album: { images: currentTrackInfo.album.images },
+          uri: currentTrackInfo.uri,
+          duration_ms: 0,
+          external_urls: { spotify: '' }
         });
         
-        updatePlayingState(!state.paused);
+        setIsPlaying(!state.paused);
+        setMusicContextPlaying(!state.paused);
       });
 
       // Connect to the player
       spotifyPlayer.connect().then((success) => {
         if (success) {
-          console.log('The Web Playback SDK successfully connected to Spotify!');
+          console.log('Connected to Spotify Web Playback SDK!');
         }
       });
     };
-  }, [token, volume, updatePlayingState]);
-
-  // Handle token from URL hash or localStorage
-  useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
-    const accessToken = hashParams.get('access_token');
-
-    if (accessToken) {
-      setToken(accessToken);
-      try {
-        window.localStorage.setItem('spotify_token', accessToken);
-        window.history.replaceState(null, '', window.location.pathname);
-      } catch (error) {
-        console.error('Failed to store token:', error);
-      }
-    } else {
-      try {
-        const storedToken = window.localStorage.getItem('spotify_token');
-        if (storedToken) setToken(storedToken);
-      } catch (error) {
-        console.error('Failed to retrieve token:', error);
-      }
-    }
-  }, []);
-
-  // Fetch playlists from Spotify API
-  const fetchPlaylists = useCallback(async (): Promise<SpotifyPlaylistInfo[]> => {
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch playlists');
-      }
-      
-      const data: SpotifyPlaylistResponse = await response.json();
-      
-      return data.items.map(item => ({
-        id: item.id,
-        name: item.name,
-        uri: item.uri,
-        imageUrl: item.images[0]?.url
-      }));
-    } catch (error) {
-      console.error('Error fetching playlists:', error);
-      return [];
-    }
-  }, [token]);
-
-  // Fetch user's playlists
-  useEffect(() => {
-    const fetchUserPlaylists = async () => {
-      if (!token) return;
-      
-      try {
-        const fetchedPlaylists = await fetchPlaylists();
-        
-        // If we have playlists and none of them are in settings, add them
-        if (fetchedPlaylists.length > 0 && !spotifyPlaylists?.some(p => 
-          fetchedPlaylists.some(fp => fp.id === p.id)
-        )) {
-          // Update the playlists in settings
-          updateSpotifyPlaylists(fetchedPlaylists);
-        }
-      } catch (error) {
-        console.error('Error fetching user playlists:', error);
-        if (error instanceof Error && error.message.includes('The access token expired')) {
-          logout();
-        }
-      }
-    };
-    
-    fetchUserPlaylists();
-  }, [token, spotifyPlaylists, updateSpotifyPlaylists, logout, fetchPlaylists]);
-
-  // Play a specific playlist
-  const playPlaylist = useCallback(async (playlistUri: string) => {
-    if (!token || !deviceId) return;
-    
-    try {
-      await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          context_uri: playlistUri
-        })
-      });
-      
-      // Update the last played playlist URI
-      setLastPlayedPlaylistUri(playlistUri);
-    } catch (error) {
-      console.error('Error playing playlist:', error);
-    }
-  }, [token, deviceId]);
-
-  // Play the current Spotify playlist from settings
-  useEffect(() => {
-    if (!token || !deviceId || !currentSpotifyPlaylistUri) return;
-    
-    // Log when the playlist changes
-    console.log('Current playlist URI changed to:', currentSpotifyPlaylistUri);
-    console.log('Last played playlist URI:', lastPlayedPlaylistUri);
-    
-    // The user will need to click the play button to start playback
-    setIsLoading(false);
-    
-    // keep track of the current playlist URI to use when the user clicks play
-  }, [deviceId, currentSpotifyPlaylistUri, token, lastPlayedPlaylistUri]);
-
-  // Add a new useEffect to handle playlist changes
-  useEffect(() => {
-    // If we're already playing music and the playlist changes, switch to the new playlist
-    // Only switch if the current playlist is different from the last played one
-    if (token && deviceId && currentSpotifyPlaylistUri && isPlaying && 
-        currentSpotifyPlaylistUri !== lastPlayedPlaylistUri) {
-      console.log('Switching to new playlist:', currentSpotifyPlaylistUri);
-      // This will switch to the new playlist while maintaining playback state
-      playPlaylist(currentSpotifyPlaylistUri)
-        .catch(error => console.error('Error switching playlist:', error));
-    }
-  }, [currentSpotifyPlaylistUri, token, deviceId, isPlaying, playPlaylist, lastPlayedPlaylistUri]);
-
-  // Function to play the current playlist (will be called by user interaction)
-  const playCurrentPlaylist = async () => {
-    if (!token || !deviceId || !currentSpotifyPlaylistUri) return;
-    
-    try {
-      setIsLoading(true);
-      await playPlaylist(currentSpotifyPlaylistUri);
-      // Update playing state in both local state and MusicContext
-      updatePlayingState(true);
-    } catch (error) {
-      console.error('Error playing playlist:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loginToSpotify = () => {
-    // Ensure REDIRECT_URI is defined before using it
-    if (!CLIENT_ID || !REDIRECT_URI) {
-      console.error('Spotify client ID or redirect URI is not defined');
-      return;
-    }
-    
-    window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
-      REDIRECT_URI
-    )}&response_type=${RESPONSE_TYPE}&scope=${SCOPES.join('%20')}`;
-  };
-
-  const togglePlayback = async () => {
-    try {
-      const currentPlayer = player || playerRef.current;
-      if (!currentPlayer) return;
-      
-      // If we're not currently playing anything, start the playlist
-      if (!isPlaying && !currentTrack) {
-        await playCurrentPlaylist();
-        return;
-      }
-      
-      // Otherwise toggle play/pause on the current track
-      await currentPlayer.togglePlay();
-      
-      // Update the player state in the MusicContext
-      const state = await currentPlayer.getCurrentState();
-      if (state) {
-        // Update local state based on the player's paused state
-        updatePlayingState(!state.paused);
-      }
-    } catch (error) {
-      console.error('Error toggling playback:', error);
-    }
-  };
-
-  const nextTrack = async () => {
-    try {
-      const currentPlayer = player || playerRef.current;
-      if (!currentPlayer) return;
-      
-      await currentPlayer.nextTrack();
-    } catch (error) {
-      console.error('Error skipping to next track:', error);
-    }
-  };
-
-  const previousTrack = async () => {
-    try {
-      const currentPlayer = player || playerRef.current;
-      if (!currentPlayer) return;
-      
-      await currentPlayer.previousTrack();
-    } catch (error) {
-      console.error('Error going to previous track:', error);
-    }
-  };
-
-  const toggleMute = async () => {
-    try {
-      const currentPlayer = player || playerRef.current;
-      if (!currentPlayer) return;
-      
-      if (isMuted) {
-        await currentPlayer.setVolume(volume);
-      } else {
-        await currentPlayer.setVolume(0);
-      }
-      setIsMuted(!isMuted);
-    } catch (error) {
-      console.error('Error toggling mute:', error);
-    }
-  };
-
-  const handleVolumeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const newVolume = parseFloat(e.target.value);
-      setVolume(newVolume);
-      
-      // Use both the state and ref to ensure we have access to the player
-      const currentPlayer = player || playerRef.current;
-      if (!currentPlayer) return;
-      
-      await currentPlayer.setVolume(newVolume);
-      if (newVolume > 0 && isMuted) {
-        setIsMuted(false);
-      }
-    } catch (error) {
-      console.error('Error changing volume:', error);
-    }
-  };
-
-  // Update the player state when it changes
-  useEffect(() => {
-    if (player) {
-      // Register the player with the MusicContext so Timer can pause it
-      registerPlayer(player);
-    }
-  }, [player, registerPlayer]);
-
+  }, [volume, setMusicContextPlaying]);
   // Don't render if user has chosen YouTube player
   if (settings.preferredMusicService === 'youtube') {
     return null;
   }
 
-  // Mini player in bottom left
+  // Search-based Spotify player
   return (
-    <div className={`fixed bottom-4 left-4 z-50 transition-all duration-300 ${isExpanded ? 'w-72' : 'w-16'} bg-black/80 backdrop-blur-md rounded-lg shadow-lg overflow-hidden`}>
-      {!token ? (
-        <button
-          onClick={loginToSpotify}
-          className="w-full h-16 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
+    <div className={`fixed bottom-4 left-4 z-50 transition-all duration-300 ${isExpanded ? 'w-80' : 'w-16'} bg-black/80 backdrop-blur-md rounded-lg shadow-lg overflow-hidden`}>
+      {/* Mini player header/toggle */}
+      <div className="flex items-center p-2">
+        <div 
+          className="cursor-pointer flex items-center flex-1"
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14"></path>
-          </svg>
-        </button>
-      ) : (
-        <>
-          {/* Mini player header/toggle */}
-          <div className="flex items-center p-2">
-            <div 
-              className="cursor-pointer flex items-center flex-1"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              {currentTrack?.album.images[0]?.url ? (
-                <div className="w-12 h-12 relative rounded overflow-hidden flex-shrink-0">
-                  <Image
-                    src={currentTrack.album.images[0].url}
-                    alt="Album Art"
-                    fill
-                    className="object-cover"
-                  />
+          <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center mr-2">
+            <span className="text-white text-sm font-bold">♪</span>
+          </div>
+          {!isExpanded && (
+            <div className="text-white text-xs">
+              {currentTrack ? (
+                <div>
+                  <div className="font-medium truncate">{currentTrack.name}</div>
+                  <div className="text-white/60 truncate">
+                    {currentTrack.artists.map(a => a.name).join(', ')}
+                  </div>
                 </div>
               ) : (
-                <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" width="24" height="24" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 18V5l12-2v13"></path>
-                    <circle cx="6" cy="18" r="3"></circle>
-                    <circle cx="18" cy="16" r="3"></circle>
-                  </svg>
-                </div>
+                <div className="text-white/60">Spotify</div>
               )}
-              
-              {isExpanded && (
-                <div className="ml-2 flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{currentTrack?.name || 'Not Playing'}</p>
-                  <p className="text-white/70 text-xs truncate">
-                    {currentTrack?.artists.map(a => a.name).join(', ') || 'Spotify'}
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {/* Add play/pause button to collapsed view */}
-            {!isExpanded && (
-              <button 
-                onClick={togglePlayback}
-                className="ml-1 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : isPlaying ? (
-                  <Pause size={14} />
-                ) : (
-                  <Play size={14} className="ml-0.5" />
-                )}
-              </button>
-            )}
-          </div>
-          
-          {/* Expanded player controls */}
-          {isExpanded && (
-            <div className="p-3 border-t border-white/10">
-              {/* Playback controls */}
-              <div className="flex items-center justify-between mb-3">
-                <button 
-                  onClick={previousTrack}
-                  className="text-white/70 hover:text-white transition-colors"
-                  disabled={isLoading || !currentTrack}
-                >
-                  <SkipBack size={18} />
-                </button>
-                
-                <button 
-                  onClick={togglePlayback}
-                  className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black hover:scale-105 transition-transform"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                  ) : isPlaying ? (
-                    <Pause size={18} />
-                  ) : (
-                    <Play size={18} className="ml-0.5" />
-                  )}
-                </button>
-                
-                <button 
-                  onClick={nextTrack}
-                  className="text-white/70 hover:text-white transition-colors"
-                  disabled={isLoading || !currentTrack}
-                >
-                  <SkipForward size={18} />
-                </button>
-              </div>
-              
-              {/* Volume control */}
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={toggleMute}
-                  className="text-white/70 hover:text-white transition-colors"
-                >
-                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-                
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={isMuted ? 0 : volume}
-                  onChange={handleVolumeChange}
-                  className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-white"
-                />
-              </div>
-              
-              {/* Playlists button */}
-              <button
-                onClick={openSpotifySettings}
-                className="w-full mt-3 py-1.5 text-xs bg-green-600/20 text-green-400 rounded-lg hover:bg-green-600/30 transition-colors"
-              >
-                Manage Playlists
-              </button>
-              
-              {/* Logout button */}
-              <button
-                onClick={logout}
-                className="w-full mt-2 py-1 text-xs text-white/70 hover:text-white transition-colors"
-              >
-                Disconnect
-              </button>
             </div>
           )}
-        </>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="p-3">
+          {/* Search Input */}
+          <div className="mb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search songs, albums..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-green-500 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Search Results */}
+          <div className="max-h-60 overflow-y-auto custom-scrollbar">
+            {isSearching ? (
+              <div className="text-white/60 text-center py-4">Searching...</div>
+            ) : searchQuery && (
+              <div className="space-y-2">
+                {/* Tracks */}
+                {searchResults.tracks?.items?.slice(0, 5).map((track) => (
+                  <div
+                    key={track.id}
+                    className="flex items-center p-2 bg-white/5 rounded hover:bg-white/10 cursor-pointer transition-colors"
+                    onClick={() => playTrack(track)}
+                  >
+                    <Image
+                      src={track.album.images[0]?.url || '/placeholder.png'}
+                      alt={track.album.name || 'Album'}
+                      width={40}
+                      height={40}
+                      className="rounded mr-3"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-sm font-medium truncate">{track.name}</div>
+                      <div className="text-white/60 text-xs truncate">
+                        {track.artists.map(a => a.name).join(', ')}
+                      </div>
+                    </div>
+                    <div className="text-white/40 text-xs">♪</div>
+                  </div>
+                ))}
+
+                {/* Albums */}
+                {searchResults.albums?.items?.slice(0, 3).map((album) => (
+                  <div
+                    key={album.id}
+                    className="flex items-center p-2 bg-white/5 rounded hover:bg-white/10 cursor-pointer transition-colors"
+                    onClick={() => playAlbum(album)}
+                  >
+                    <Image
+                      src={album.images[0]?.url || '/placeholder.png'}
+                      alt={album.name}
+                      width={40}
+                      height={40}
+                      className="rounded mr-3"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-sm font-medium truncate">{album.name}</div>
+                      <div className="text-white/60 text-xs truncate">
+                        {album.artists.map(a => a.name).join(', ')}
+                      </div>
+                    </div>
+                    <div className="text-white/40 text-xs">💿</div>
+                  </div>
+                ))}
+
+                {(!searchResults.tracks?.items?.length && !searchResults.albums?.items?.length) && searchQuery && (
+                  <div className="text-white/60 text-center py-4">No results found</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Current Track & Controls */}
+          {currentTrack && (
+            <div className="mt-3 pt-3 border-t border-white/20">
+              <div className="flex items-center mb-2">
+                <Image
+                  src={currentTrack.album.images[0]?.url || '/placeholder.png'}
+                  alt={currentTrack.album.name || 'Album'}
+                  width={40}
+                  height={40}
+                  className="rounded mr-3"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-white text-sm font-medium truncate">{currentTrack.name}</div>
+                  <div className="text-white/60 text-xs truncate">
+                    {currentTrack.artists.map(a => a.name).join(', ')}
+                  </div>
+                </div>
+              </div>
+
+              {/* Player Controls */}
+              <div className="flex items-center justify-center space-x-2">
+                <button
+                  onClick={() => player?.previousTrack()}
+                  className="p-2 text-white/60 hover:text-white transition-colors"
+                >
+                  <SkipBack className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (isPlaying) {
+                      player?.pause();
+                    } else {
+                      player?.resume();
+                    }
+                  }}
+                  className="p-3 bg-green-600 rounded-full text-white hover:bg-green-700 transition-colors"
+                >
+                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                </button>
+
+                <button
+                  onClick={() => player?.nextTrack()}
+                  className="p-2 text-white/60 hover:text-white transition-colors"
+                >
+                  <SkipForward className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsMuted(!isMuted);
+                    player?.setVolume(isMuted ? volume : 0);
+                  }}
+                  className="p-2 text-white/60 hover:text-white transition-colors"
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!deviceId && (
+            <div className="text-white/60 text-xs text-center mt-2">
+              Connect a Spotify app to start playing
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
