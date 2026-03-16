@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  User, 
+import {
+  User,
   signInWithPopup, 
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -10,9 +10,8 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase/config';
+import { auth, db, googleProvider, isFirebaseConfigured } from '../firebase/config';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
 
 interface AuthContextType {
   user: User | null;
@@ -31,13 +30,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    if (!auth || !db || !isFirebaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
+    const firebaseAuth = auth;
+    const firestore = db;
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
       
       // If user is logged in, ensure they have a document in Firestore
       if (currentUser) {
-        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocRef = doc(firestore, 'users', currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         
         if (!userDoc.exists()) {
@@ -56,6 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!auth || !googleProvider) {
+      throw new Error('Firebase auth is not configured');
+    }
+
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
@@ -65,6 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error('Firebase auth is not configured');
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -74,6 +89,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error('Firebase auth is not configured');
+    }
+
     try {
       await createUserWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -83,6 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
+    if (!auth) {
+      throw new Error('Firebase auth is not configured');
+    }
+
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error) {
@@ -92,6 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (!auth) {
+      throw new Error('Firebase auth is not configured');
+    }
+
     try {
       await firebaseSignOut(auth);
     } catch (error) {

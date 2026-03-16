@@ -44,9 +44,17 @@ interface Settings {
   chatExportEnabled?: boolean;
 }
 
+const getFirestoreInstance = () => {
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+
+  return db;
+};
+
 // Get user document reference
 export const getUserDocRef = (userId: string) => {
-  return doc(db, 'users', userId);
+  return doc(getFirestoreInstance(), 'users', userId);
 };
 
 // Get user settings from Firestore

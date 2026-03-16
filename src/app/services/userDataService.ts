@@ -100,6 +100,10 @@ interface UserData {
 
 // Save user data to Firestore
 export const saveUserData = async (userId: string, data: UserData): Promise<void> => {
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+
   try {
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
@@ -132,6 +136,10 @@ export const saveUserData = async (userId: string, data: UserData): Promise<void
 
 // Load user data from Firestore
 export const loadUserData = async (userId: string): Promise<UserData | null> => {
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+
   try {
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
@@ -159,6 +167,10 @@ export const saveUserAnalytics = async (userId: string, analytics: UserAnalytics
 
 // Save mood data to Firestore
 export const saveUserMoodData = async (userId: string, moodData: UserMoodData): Promise<void> => {
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+
   try {
     const userDocRef = doc(db, 'users', userId);
     
@@ -191,6 +203,10 @@ export const saveUserMoodData = async (userId: string, moodData: UserMoodData): 
 
 // Save chat history to Firestore
 export const saveUserChatHistory = async (userId: string, chatHistory: ChatMessage[]): Promise<void> => {
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+
   try {
     const userDocRef = doc(db, 'users', userId);
     
@@ -223,6 +239,10 @@ export const saveUserChatHistory = async (userId: string, chatHistory: ChatMessa
 
 // Completely reset mood data in Firestore (for clearing thousands of entries)
 export const resetUserMoodData = async (userId: string): Promise<void> => {
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+
   try {
     const userDocRef = doc(db, 'users', userId);
     
