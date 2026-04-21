@@ -19,7 +19,7 @@
     "firebase": "^11.10.0",
     "framer-motion": "^12.27.5",
     "lucide-react": "^0.475.0",
-    "next": "16.1.4",
+    "next": "16.2.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-toastify": "^11.0.5",
